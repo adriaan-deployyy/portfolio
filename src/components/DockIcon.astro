@@ -1,0 +1,180 @@
+---
+import type { IconSpec } from "../data/dock";
+
+interface Props {
+  spec: IconSpec;
+  class?: string;
+  /**
+   * Calendar icons show today (kept current by the menu bar clock); "meeting" leaves the date
+   * to the notification that uses it (Notifications.astro sets the meeting's day)
+   */
+  calendarDate?: "today" | "meeting";
+}
+
+const { spec, class: className, calendarDate = "today" } = Astro.props;
+const dateAttrs =
+  calendarDate === "today"
+    ? { weekday: { "data-cal-weekday": "" }, date: { "data-cal-date": "" } }
+    : { weekday: { "data-meeting-weekday": "" }, date: { "data-meeting-date": "" } };
+
+// Server-rendered fallback; MenuBar.astro's clock swaps in the visitor's own date on load
+const now = new Date();
+const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(now);
+---
+
+{
+  spec.kind === "image" ? (
+    <img class:list={["icon", className]} src={spec.src} alt="" width="36" height="36" draggable="false" />
+  ) : spec.kind === "calendar" ? (
+    <span class:list={["icon", "calendar", `calendar--${spec.tone}`, className]}>
+      <span class="calendar__weekday" {...dateAttrs.weekday}>{weekday}</span>
+      <span class="calendar__date" {...dateAttrs.date}>{now.getDate()}</span>
+    </span>
+  ) : (
+    <span
+      class:list={["icon", "tile", { "tile--hairline": spec.hairline }, className]}
+      style={{ "--tile-fill": spec.fill, "--tile-shadow": spec.shadow, "--tile-drop": spec.drop, "--tile-pad": spec.padding }}
+    >
+      <span class="glyph" style={{ aspectRatio: spec.aspect }}>
+        {spec.layers.map((layer) => (
+          <span class="layer" style={{ inset: layer.inset }}>
+            <img src={layer.src} alt="" draggable="false" />
+          </span>
+        ))}
+      </span>
+      {spec.overlays?.map((overlay) => (
+        <img class="overlay" src={overlay.src} alt="" style={overlay.style} draggable="false" />
+      ))}
+    </span>
+  )
+}
+
+<style>
+  .icon {
+    display: block;
+    width: var(--dock-icon);
+    height: var(--dock-icon);
+    object-fit: cover;
+    user-select: none;
+  }
+
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--tile-pad);
+    border-radius: var(--radius-200);
+    background: var(--tile-fill);
+    filter: var(--tile-drop);
+  }
+
+  /* Inner shadows sit above the glyph, as in Figma */
+  .tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--tile-shadow);
+    pointer-events: none;
+  }
+
+  .tile--hairline {
+    border-block: 0.5px solid rgba(255, 255, 255, 0.16);
+  }
+
+  .glyph {
+    position: relative;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .layer {
+    position: absolute;
+  }
+
+  .overlay {
+    position: absolute;
+    display: block;
+    max-width: none;
+  }
+
+  .layer img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+  }
+
+  /*
+   * Figma: Dock → "Calendar" (editable). 4px padding, 4px between weekday and date.
+   * Weekday: SF Pro Semibold 7px, #FF373C. Date: SF Pro Medium 20px (Figma has Light) with a soft top-to-bottom
+   * gradient. Text is trimmed to cap height like Figma's text-box-trim so the pair centres.
+   */
+  .calendar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius-200);
+    font-family: var(--font-system);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .calendar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .calendar--light {
+    background: #ffffff;
+    filter: drop-shadow(0 1px 0.5px rgba(0, 0, 0, 0.1));
+  }
+
+  .calendar--light::after {
+    box-shadow: var(--effect-white-bg);
+  }
+
+  .calendar--dark {
+    background: var(--tile-black-fill);
+    filter: var(--effect-black-bg-drop);
+  }
+
+  .calendar--dark::after {
+    box-shadow: var(--effect-black-bg);
+  }
+
+  .calendar__weekday,
+  .calendar__date {
+    text-box: trim-both cap alphabetic;
+  }
+
+  .calendar__weekday {
+    font-size: 7px;
+    font-weight: 590;
+    color: #ff373c;
+    text-shadow: 0.5px 0.5px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .calendar__date {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #000000, #444444);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .calendar--dark .calendar__date {
+    background-image: linear-gradient(180deg, #ffffff, #bbbbbb);
+  }
+</style>

@@ -1,0 +1,190 @@
+---
+interface Props {
+  appName?: string;
+  menus?: string[];
+}
+
+const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "Help"] } = Astro.props;
+---
+
+<header class="menubar">
+  <div class="menubar__leading">
+    <!-- Deployyy mark in the Figma's Apple-logo slot -->
+    <a
+      class="menubar__item menubar__logo"
+      href="https://deployyy.co"
+      target="_blank"
+      rel="noopener"
+      aria-label="Deployyy.co (opens in a new tab)"
+    >
+      <svg width="22" height="10" viewBox="0 0 22 10" fill="none" aria-hidden="true">
+        <path
+          d="M9.87461 0.258587V4.96917C9.87461 5.16197 9.69578 5.2952 9.55946 5.43153L5.18243 9.80856C5.01682 9.97417 4.75921 9.84536 4.75921 9.62455V5.24518C4.75921 5.17158 4.70401 5.11638 4.6304 5.11638H0.251034C0.0302258 5.11638 -0.0801785 4.84037 0.0670272 4.69316L4.64881 0.111381C4.72241 0.0377781 4.81441 0.000976562 4.90642 0.000976562H9.617C9.76421 0.000976562 9.87461 0.111381 9.87461 0.258587Z"
+          fill="currentColor"></path>
+        <path
+          d="M12.1074 9.62516V4.91458C12.1074 4.72178 12.2862 4.58854 12.4226 4.45222L16.7996 0.0751858C16.9652 -0.0904207 17.2228 0.0383843 17.2228 0.259193V4.65697C17.2228 4.73057 17.278 4.78577 17.3516 4.78577H21.7494C21.9702 4.78577 22.0806 5.06178 21.9334 5.20899L17.3516 9.79077C17.278 9.86437 17.186 9.90117 17.094 9.90117H12.7449C12.4797 9.90117 12.1074 9.89035 12.1074 9.62516Z"
+          fill="currentColor"></path>
+      </svg>
+    </a>
+    <!-- The app name opens that app's window (Finder) -->
+    <button class="menubar__item menubar__app" type="button" data-open-window="finder" aria-haspopup="dialog">{appName}</button>
+    {
+      menus.map((menu) => (
+        <button class="menubar__item" type="button">
+          {menu}
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="menubar__trailing">
+    <span class="menubar__status menubar__wifi" aria-label="Wi-Fi" role="img">
+      <img src="/figma/light/wifi.svg" alt="" width="34.5" height="20" />
+    </span>
+    <button
+      class="menubar__item menubar__spotlight"
+      type="button"
+      aria-label="Search the site (Spotlight)"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Meta+K Control+K"
+      title="Search (⌘K)"
+      data-spotlight-open>
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="6.75" cy="6.75" r="4.75" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <path d="m10.3 10.3 3.7 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </svg>
+    </button>
+    <button class="menubar__status menubar__control-center" type="button" aria-label="Control Center: switch light or dark mode" data-theme-toggle>
+      <img src="/figma/light/control-center.svg" alt="" width="31.15" height="21.41" />
+    </button>
+    <time class="menubar__clock" data-clock>
+      <span data-clock-date>Wed Apr 1</span>
+      <span data-clock-time>9:41 AM</span>
+    </time>
+  </div>
+</header>
+
+<style>
+  /* Figma: Menu Bar, 34px tall, 10px left / 20px right padding, 5px vertical */
+  .menubar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--menubar-height);
+    padding: 5px 20px 5px 10px;
+    color: var(--menubar-text);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    font-weight: var(--weight-emphasized);
+    user-select: none;
+  }
+
+  .menubar__leading,
+  .menubar__trailing {
+    display: flex;
+    align-items: center;
+  }
+
+  .menubar__item {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    padding: 4px 9px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .menubar__item:hover,
+  .menubar__status:hover {
+    background: var(--menubar-item-hover);
+  }
+
+  .menubar__logo {
+    justify-content: center;
+    width: 33px;
+    padding: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .menubar__logo svg {
+    display: block;
+  }
+
+  .menubar__app {
+    padding: 4px 9px 4px 11px;
+    font-weight: var(--weight-heavy);
+  }
+
+  .menubar__status {
+    display: flex;
+    border-radius: 4px;
+  }
+
+  .menubar__wifi img {
+    display: block;
+    width: 34.5px;
+    height: 20px;
+  }
+
+  .menubar__spotlight {
+    justify-content: center;
+    width: 34px;
+    padding: 0;
+  }
+
+  .menubar__control-center img {
+    display: block;
+    width: 31.15px;
+    height: 21.41px;
+  }
+
+  /* Figma: Date and Time, 13.1px, 8px between date and time */
+  .menubar__clock {
+    display: flex;
+    gap: 8px;
+    padding-left: 9px;
+    font-size: 13.1px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+
+<script>
+  import { toggleTheme } from "../scripts/theme";
+
+  const date =document.querySelector<HTMLElement>("[data-clock-date]");
+  const time = document.querySelector<HTMLElement>("[data-clock-time]");
+  const clock = document.querySelector<HTMLTimeElement>("[data-clock]");
+
+  const dateFormat = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const timeFormat = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
+  const weekdayFormat = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+
+  // The Dock's Calendar icon (light and dark versions) shows the same day as the menu bar
+  const calendarWeekdays = document.querySelectorAll<HTMLElement>("[data-cal-weekday]");
+  const calendarDates = document.querySelectorAll<HTMLElement>("[data-cal-date]");
+
+  const tick = () => {
+    const now = new Date();
+    // "Wed, Apr 1" -> "Wed Apr 1", matching the macOS menu bar
+    if (date) date.textContent = dateFormat.format(now).replace(",", "");
+    if (time) time.textContent = timeFormat.format(now);
+    clock?.setAttribute("datetime", now.toISOString());
+    for (const el of calendarWeekdays) el.textContent = weekdayFormat.format(now);
+    for (const el of calendarDates) el.textContent = String(now.getDate());
+  };
+
+  tick();
+  // Re-sync on each minute boundary
+  setTimeout(() => {
+    tick();
+    setInterval(tick, 60_000);
+  }, 60_000 - (Date.now() % 60_000));
+
+  // Control Center toggles light / dark
+  document.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);
+</script>

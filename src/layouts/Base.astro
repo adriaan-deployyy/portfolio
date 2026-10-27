@@ -1,0 +1,53 @@
+---
+import "../styles/tokens.css";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "Adriaan Myburgh" } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <!--
+      Set the theme before first paint so the wallpaper never flashes the wrong mode.
+      Visitor's local time decides: light 06:00–18:59, dark 19:00–05:59 (same rule as scripts/theme.ts).
+      A manual switch (Dock / Control Center) wins for the rest of that visit only.
+    -->
+    <script is:inline>
+      (() => {
+        let theme;
+        try {
+          theme = sessionStorage.getItem("theme");
+          localStorage.removeItem("theme"); // older builds remembered the choice forever
+        } catch {}
+        if (theme !== "light" && theme !== "dark") {
+          const hour = new Date().getHours();
+          theme = hour >= 6 && hour < 19 ? "light" : "dark";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <!-- Windows visitors get Switzer as the UI font; preload it so the menu bar doesn't reflow -->
+    <script is:inline>
+      (() => {
+        const platform = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent;
+        if (!/win/i.test(platform)) return;
+        document.documentElement.dataset.os = "windows";
+        const preload = document.createElement("link");
+        Object.assign(preload, { rel: "preload", as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+        preload.href = "/fonts/Switzer-Variable.woff2";
+        document.head.append(preload);
+      })();
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

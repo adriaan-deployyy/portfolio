@@ -1,0 +1,352 @@
+---
+import DockIcon from "./DockIcon.astro";
+import { dockApps, trash, type DockApp } from "../data/dock";
+
+const items: (DockApp | "separator")[] = [...dockApps, "separator", trash];
+
+/**
+ * Linked apps render as real links: web pages in a new tab, mailto: straight to the email app.
+ * Apps with a `window` (Finder, Calendly) open that window instead; scripts/windows.ts handles
+ * [data-open-window], and Calendly's href only matters without JavaScript.
+ */
+const linkAttrs = (item: DockApp) => {
+  const opensWindow = item.window ? { "data-open-window": item.window, "aria-haspopup": "dialog" } : {};
+  if (!item.link) return { type: "button", "aria-label": item.label, ...opensWindow };
+  if (item.link.startsWith("mailto:")) {
+    return { href: item.link, "aria-label": `${item.label}: email Adriaan` };
+  }
+  return {
+    href: item.link,
+    target: "_blank",
+    rel: "noopener",
+    "aria-label": item.window ? item.label : `${item.label} (opens in a new tab)`,
+    ...opensWindow,
+  };
+};
+---
+
+<nav class="dock" aria-label="Dock">
+  <div class="dock__bg" aria-hidden="true">
+    <span class="dock__fill dock__fill--luminosity"></span>
+    <span class="dock__fill dock__fill--tint"></span>
+    <span class="dock__fill dock__fill--lighten"></span>
+  </div>
+
+  <ul class="dock__items">
+    {
+      items.map((item) =>
+        item === "separator" ? (
+          <li class="dock__separator" aria-hidden="true">
+            <span />
+          </li>
+        ) : (
+          <li
+            class="dock__item"
+            data-app={item.id}
+            data-action={item.action}
+            data-link={item.link && !item.window ? "" : undefined}
+            data-window-id={item.window}
+          >
+            {(() => {
+              const Tag = item.link ? "a" : "button";
+              return (
+                <Tag class="dock__button" {...linkAttrs(item)}>
+                  <span class="dock__icon">
+                    <DockIcon spec={item.light} class="only-light" />
+                    <DockIcon spec={item.dark} class="only-dark" />
+                  </span>
+                  <img class="dock__dot" src="/figma/dot.svg" alt="" width="4" height="4" />
+                </Tag>
+              );
+            })()}
+            <span class="dock__label" role="tooltip">
+              {item.labels ? (
+                <>
+                  <span class="only-light">{item.labels.light}</span>
+                  <span class="only-dark">{item.labels.dark}</span>
+                </>
+              ) : (
+                item.label
+              )}
+            </span>
+          </li>
+        ),
+      )
+    }
+  </ul>
+</nav>
+
+<style>
+  /* Figma: Dock, 8px top/side padding, 12px gap, 14px above the screen edge */
+  .dock {
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    translate: -50% 0;
+    z-index: 20;
+  }
+
+  .dock__bg {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--dock-radius);
+    box-shadow: 0 0 8px 0 rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+  }
+
+  .dock__fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .dock__fill--luminosity {
+    background: var(--dock-fill-luminosity);
+    mix-blend-mode: luminosity;
+  }
+
+  .dock__fill--tint {
+    background: rgba(26, 26, 26, 0.1);
+  }
+
+  .dock__fill--lighten {
+    background: rgba(255, 255, 255, 0.08);
+    mix-blend-mode: lighten;
+  }
+
+  .dock__items {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: var(--dock-gap);
+    margin: 0;
+    padding: 8px 8px 0;
+    list-style: none;
+  }
+
+  /* Each slot is 36 x 47: icon, 3px gap, 4px running dot, 4px bottom padding */
+  .dock__item {
+    --s: 1;
+    position: relative;
+    width: calc(var(--dock-icon) * var(--s));
+    height: 47px;
+    transition: width 120ms ease-out;
+  }
+
+  .dock__button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+    height: 100%;
+    padding-bottom: 4px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .dock__icon {
+    display: block;
+    width: var(--dock-icon);
+    height: var(--dock-icon);
+    transform-origin: 50% 100%;
+    scale: var(--s);
+    transition: scale 120ms ease-out;
+    will-change: scale;
+  }
+
+  .dock__dot {
+    width: 4px;
+    height: 4px;
+    mix-blend-mode: plus-lighter;
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .dock__item.is-running .dock__dot {
+    opacity: 1;
+  }
+
+  .dock__item.is-launching .dock__icon {
+    animation: dock-bounce 0.6s ease-in-out 2;
+  }
+
+  /* Linked apps hop once as their link opens (no running dot: they open outside the site) */
+  .dock__item.is-hopping .dock__icon {
+    animation: dock-bounce 0.5s ease-in-out 1;
+  }
+
+  @keyframes dock-bounce {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -18px;
+    }
+  }
+
+  .dock__label {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--dock-icon) * var(--s) + 22px);
+    translate: -50% 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    font-weight: var(--weight-regular);
+    white-space: nowrap;
+    color: var(--label-primary);
+    background: color-mix(in srgb, var(--window-background) 80%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 120ms ease,
+      translate 120ms ease;
+  }
+
+  .dock__item:hover .dock__label,
+  .dock__button:focus-visible + .dock__label {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  /* Figma: 1 x 36 separator, plus-lighter, 5px side padding, 9.5px bottom padding */
+  .dock__separator {
+    display: flex;
+    align-items: flex-end;
+    align-self: stretch;
+    padding: 0 5px 9.5px;
+  }
+
+  .dock__separator span {
+    width: 1px;
+    height: 36px;
+    background: var(--dock-separator);
+    mix-blend-mode: plus-lighter;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dock__item,
+    .dock__icon {
+      transition: none;
+    }
+    .dock__item.is-launching .dock__icon,
+    .dock__item.is-hopping .dock__icon {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { toggleTheme } from "../scripts/theme";
+
+  const MAX_SCALE = 1.75;
+  const RANGE = 150; // px from the cursor at which magnification fades out
+
+  const dock = document.querySelector<HTMLElement>(".dock");
+  const items = [...document.querySelectorAll<HTMLElement>(".dock__item")];
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+  /*
+   * Maps opens Cape Town in the visitor's own map app: Apple Maps on Mac, iPhone and iPad,
+   * the default maps app on Android (geo: link), and Google Maps in a new tab everywhere else
+   * (the link's built-in default).
+   */
+  // Window apps show the running dot while their window is open (minimised still counts)
+  document.addEventListener("windows:change", (event) => {
+    const open: string[] = (event as CustomEvent).detail.open;
+    for (const item of items) {
+      if (item.dataset.windowId) item.classList.toggle("is-running", open.includes(item.dataset.windowId));
+    }
+  });
+
+  const PLACE = "Cape%20Town%2C%20South%20Africa";
+  const mapsLink = document.querySelector<HTMLAnchorElement>('.dock__item[data-app="maps"] a');
+  if (mapsLink) {
+    const ua = navigator.userAgent;
+    const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform ?? "";
+    // iPads report "MacIntel" with touch, so both cases land on Apple Maps
+    const isApple = /mac|iphone|ipad|ipod/i.test(platform) || /iPhone|iPad|iPod/.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    if (isApple) {
+      mapsLink.href = `https://maps.apple.com/?q=${PLACE}`;
+    } else if (isAndroid) {
+      mapsLink.href = `geo:0,0?q=${PLACE}`;
+      mapsLink.removeAttribute("target"); // geo: hands off to the app, there's no tab to open
+    }
+  }
+
+  if (dock) {
+    let frame = 0;
+
+    const magnify = (x: number) => {
+      for (const item of items) {
+        const rect = item.getBoundingClientRect();
+        const distance = Math.abs(x - (rect.left + rect.width / 2));
+        const t = Math.max(0, 1 - distance / RANGE);
+        // cosine falloff, like the real dock
+        const s = 1 + (MAX_SCALE - 1) * (1 - Math.cos(t * Math.PI)) / 2;
+        item.style.setProperty("--s", s.toFixed(3));
+      }
+    };
+
+    dock.addEventListener("pointermove", (event) => {
+      if (reduceMotion.matches || event.pointerType !== "mouse") return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => magnify(event.clientX));
+    });
+
+    dock.addEventListener("pointerleave", () => {
+      cancelAnimationFrame(frame);
+      for (const item of items) item.style.setProperty("--s", "1");
+    });
+
+    for (const item of items) {
+      const button = item.querySelector<HTMLElement>(".dock__button");
+      button?.addEventListener("click", () => {
+        // The Appearance icon flips the whole site between light and dark
+        if (item.dataset.action === "toggle-theme") {
+          toggleTheme();
+          return;
+        }
+        // Window apps (Finder, Calendly): the window manager opens the window; the icon hops
+        // on first launch and its running dot follows the window (see "windows:change" below)
+        if (item.dataset.windowId) {
+          if (item.classList.contains("is-running") || reduceMotion.matches) return;
+          item.classList.add("is-hopping");
+          item.addEventListener("animationend", () => item.classList.remove("is-hopping"), { once: true });
+          return;
+        }
+        // Linked apps (WhatsApp, LinkedIn, Gmail, Maps): the link does the work, the icon just hops
+        if (item.dataset.link !== undefined) {
+          if (reduceMotion.matches) return;
+          item.classList.remove("is-hopping");
+          void item.offsetWidth; // restart the hop on repeat clicks
+          item.classList.add("is-hopping");
+          item.addEventListener("animationend", () => item.classList.remove("is-hopping"), { once: true });
+          return;
+        }
+        if (item.dataset.app === "trash" || item.classList.contains("is-running")) return;
+        item.classList.add("is-launching");
+        item.addEventListener(
+          "animationend",
+          () => {
+            item.classList.remove("is-launching");
+            item.classList.add("is-running");
+          },
+          { once: true },
+        );
+        if (reduceMotion.matches) {
+          item.classList.remove("is-launching");
+          item.classList.add("is-running");
+        }
+      });
+    }
+  }
+</script>

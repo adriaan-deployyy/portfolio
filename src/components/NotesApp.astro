@@ -1,0 +1,285 @@
+---
+/*
+ * Notes, opened from the Dock: Adriaan's intro, laid out like the macOS Notes app.
+ * Folders on the left, the note list in the middle (one note, selected) and the note itself.
+ * Narrower windows drop the folders, then the list, leaving just the note.
+ * The note's links work: email, Calendly (opens the booking pop-up) and deployyy.co.
+ */
+import { links } from "../data/dock";
+
+const email = links.email.replace("mailto:", "");
+const calendlyLabel = links.calendly.replace(/^https?:\/\//, "");
+---
+
+<div class="notes">
+  <aside class="notes__folders" aria-label="Folders">
+    <p class="notes__group">iCloud</p>
+    <span class="notes__folder is-active">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M1.5 4.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.5h5.5a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 1-1.5 1.5H3a1.5 1.5 0 0 1-1.5-1.5Z" />
+      </svg>
+      <span class="notes__folder-name">Notes</span>
+      <span class="notes__count">1</span>
+    </span>
+  </aside>
+
+  <aside class="notes__list" aria-label="Notes">
+    <p class="notes__list-heading">Pinned</p>
+    <div class="notes__item is-active">
+      <span class="notes__item-title">Hey it’s Adriaan</span>
+      <span class="notes__item-meta"><span>Today</span> I'm on a mission to become the best designer in the world.</span>
+    </div>
+  </aside>
+
+  <article class="notes__page">
+    <div class="notes__sheet">
+      <h3 class="notes__title">Hey it’s Adriaan,</h3>
+
+      <p>I'm on a mission to become the best designer in the world.</p>
+
+      <p>I want to work with teams that are just as ambitious as I am.</p>
+
+      <p>
+        With my own team of 3 <a href="https://deployyy.co" target="_blank" rel="noopener">@deployyy.co</a> I’ve worked
+        with over +30 teams globally.
+      </p>
+
+      <p>Taking ownership of product positioning, design all the way to getting projects live.</p>
+
+      <p>
+        Managing clients, employees, and big projects accelerated my capabilities to work under pressure and tight
+        deadlines as a leader and creative.
+      </p>
+
+      <p class="notes__label">Hobbies:</p>
+      <ul class="notes__hobbies">
+        <li><span aria-hidden="true">🥊</span> MMA</li>
+        <li><span aria-hidden="true">🏔️</span> Hiking</li>
+        <li><span aria-hidden="true">🏕️</span> Camping</li>
+        <li><span aria-hidden="true">📖</span> Reading at a very unimpressive pace</li>
+      </ul>
+
+      <p>
+        If you’re keen to learn more about me, and explore working together (permanent position, freelance, retainer) <span
+          aria-hidden="true">👇</span>
+      </p>
+
+      <p class="notes__contact">
+        <a href={links.email}>{email}</a>
+        <a href={links.calendly} target="_blank" rel="noopener" data-open-window="calendly" aria-haspopup="dialog">
+          {calendlyLabel}
+        </a>
+      </p>
+    </div>
+  </article>
+</div>
+
+<style>
+  .notes {
+    --notes-rule: color-mix(in srgb, var(--label-primary) 10%, transparent);
+    --notes-muted: color-mix(in srgb, var(--label-primary) 50%, transparent);
+    --notes-side: color-mix(in srgb, var(--label-primary) 4%, transparent);
+    /* Notes' yellow accent: the selected note, and links */
+    --notes-accent: #e5b60e;
+    --notes-link: #b38600;
+    --notes-selected: rgba(255, 214, 10, 0.35);
+    display: grid;
+    grid-template-columns: 170px 230px minmax(0, 1fr);
+    height: 100%;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    color: var(--label-primary);
+  }
+
+  :global(:root[data-theme="dark"]) .notes {
+    --notes-link: #ffd60a;
+    --notes-selected: rgba(255, 214, 10, 0.28);
+  }
+
+  /* Folders */
+  .notes__folders {
+    padding: 10px 8px;
+    background: var(--notes-side);
+    border-right: 1px solid var(--notes-rule);
+    user-select: none;
+  }
+
+  .notes__group {
+    margin: 2px 8px 4px;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    font-weight: var(--weight-emphasized);
+    color: var(--notes-muted);
+  }
+
+  .notes__folder {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 6px;
+  }
+
+  .notes__folder.is-active {
+    background: color-mix(in srgb, var(--label-primary) 11%, transparent);
+    font-weight: var(--weight-emphasized);
+  }
+
+  .notes__folder svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--notes-accent);
+    stroke-width: 1.4;
+  }
+
+  .notes__folder-name {
+    flex: 1;
+  }
+
+  .notes__count {
+    font-size: var(--text-subheadline);
+    color: var(--notes-muted);
+  }
+
+  /* Note list */
+  .notes__list {
+    padding: 10px 10px;
+    border-right: 1px solid var(--notes-rule);
+    user-select: none;
+  }
+
+  .notes__list-heading {
+    margin: 2px 8px 6px;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    font-weight: 700;
+    color: var(--notes-muted);
+  }
+
+  .notes__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+
+  .notes__item.is-active {
+    background: var(--notes-selected);
+  }
+
+  .notes__item-title {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notes__item-meta {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    color: var(--notes-muted);
+  }
+
+  .notes__item-meta span {
+    margin-right: 4px;
+    font-weight: var(--weight-emphasized);
+    color: var(--label-primary);
+  }
+
+  /* The note */
+  .notes__page {
+    min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .notes__sheet {
+    max-width: 620px;
+    padding: 26px 32px 40px;
+    font-size: 14px;
+    line-height: 1.55;
+    user-select: text;
+  }
+
+  .notes__sheet p {
+    margin: 0 0 12px;
+  }
+
+  /* Notes' "Title" style for the first line */
+  .notes__title {
+    margin: 0 0 14px;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .notes__label {
+    font-weight: 700;
+    margin-bottom: 4px !important;
+  }
+
+  .notes__hobbies {
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .notes__hobbies li {
+    padding: 1px 0;
+  }
+
+  .notes__contact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .notes__sheet a {
+    color: var(--notes-link);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+  }
+
+  .notes__sheet a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .notes__sheet a:focus-visible {
+    outline: 2px solid var(--notes-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Narrower windows: drop the folders, then the note list */
+  @container window (max-width: 760px) {
+    .notes {
+      grid-template-columns: 220px minmax(0, 1fr);
+    }
+    .notes__folders {
+      display: none;
+    }
+  }
+
+  @container window (max-width: 540px) {
+    .notes {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .notes__list {
+      display: none;
+    }
+    .notes__sheet {
+      padding: 20px 20px 32px;
+    }
+  }
+</style>

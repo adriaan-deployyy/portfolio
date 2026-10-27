@@ -1,0 +1,347 @@
+---
+/*
+ * Notification banners, from Figma: Designs → "Notifications" (light 6490:45667, dark 6490:45671).
+ * Ten seconds after the page opens they slide in from the right, one at a time, newest on top,
+ * like macOS, ending in the Figma order: LinkedIn, the meeting invite, then the Figma request with
+ * a stacked card peeking beneath it. Each one goes away on its own after a while (not while the
+ * pointer is over them), with its close button, or when clicked, which also does what it says:
+ *   - "Daniel just messaged you" opens LinkedIn
+ *   - "Meeting with Client" opens Calendly to book a time
+ *   - "Figma: Upgrade request" opens email
+ * The meeting is always the next working day at 2 PM: tomorrow, or Monday from Friday to Sunday.
+ */
+import DockIcon from "./DockIcon.astro";
+import { dockApps, links, type DockApp } from "../data/dock";
+
+const app = (id: string) => dockApps.find((a) => a.id === id) as DockApp;
+const linkedin = app("linkedin");
+const calendar = app("calendar");
+const gmail = app("gmail");
+---
+
+<div class="notifs" data-notifs role="region" aria-label="Notifications" aria-live="polite">
+  <div class="notif" data-notif="linkedin" hidden>
+    <a class="notif__card" href={links.linkedin} target="_blank" rel="noopener">
+      <span class="notif__icon" aria-hidden="true">
+        <DockIcon spec={linkedin.light} class="only-light" />
+        <DockIcon spec={linkedin.dark} class="only-dark" />
+      </span>
+      <span class="notif__text">
+        <span class="notif__title">Daniel just messaged you</span>
+        <span class="notif__body">View message</span>
+      </span>
+      <span class="notif__time">now</span>
+    </a>
+    <button class="notif__close" type="button" aria-label="Close notification" data-notif-close>
+      <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5"></path></svg>
+    </button>
+  </div>
+
+  <div class="notif" data-notif="meeting" hidden>
+    <button class="notif__card" type="button" data-open-window="calendly" aria-haspopup="dialog">
+      <span class="notif__icon" aria-hidden="true">
+        <DockIcon spec={calendar.light} class="only-light" calendarDate="meeting" />
+        <DockIcon spec={calendar.dark} class="only-dark" calendarDate="meeting" />
+      </span>
+      <span class="notif__text">
+        <span class="notif__title">Meeting with Client</span>
+        <span class="notif__body">Invitation from Craig</span>
+        <span class="notif__body" data-meeting-when>Tomorrow at 2:00 PM</span>
+      </span>
+      <span class="notif__time">now</span>
+    </button>
+    <button class="notif__close" type="button" aria-label="Close notification" data-notif-close>
+      <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5"></path></svg>
+    </button>
+  </div>
+
+  <div class="notif notif--stacked" data-notif="figma" hidden>
+    <!-- Figma "BG - Banner - Stack": another notification tucked underneath -->
+    <span class="notif__stack" aria-hidden="true"></span>
+    <a class="notif__card" href={links.email}>
+      <span class="notif__icon" aria-hidden="true">
+        <DockIcon spec={gmail.light} class="only-light" />
+        <DockIcon spec={gmail.dark} class="only-dark" />
+      </span>
+      <span class="notif__text">
+        <span class="notif__title">Figma: Upgrade request</span>
+        <span class="notif__body">Jelle is requesting a Dev seat</span>
+      </span>
+      <span class="notif__time">now</span>
+    </a>
+    <button class="notif__close" type="button" aria-label="Close notification" data-notif-close>
+      <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5"></path></svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  /* Top right, just under the menu bar; 344px banners as in Figma */
+  .notifs {
+    --notif-fill: rgba(246, 246, 246, 0.78);
+    --notif-edge: rgba(0, 0, 0, 0.08);
+    --notif-text: #1a1a1a;
+    --notif-time: rgba(0, 0, 0, 0.38);
+    position: fixed;
+    top: calc(var(--menubar-height) + 12px);
+    right: 16px;
+    z-index: 40;
+    width: min(344px, calc(100vw - 32px));
+    pointer-events: none;
+  }
+
+  :global(:root[data-theme="dark"]) .notifs {
+    --notif-fill: rgba(40, 40, 40, 0.68);
+    --notif-edge: rgba(255, 255, 255, 0.16);
+    --notif-text: #ffffff;
+    --notif-time: rgba(255, 255, 255, 0.45);
+  }
+
+  /*
+   * Each banner sits at the top of the column and is moved into place with --y (set by the
+   * script), so when a new one arrives on top the others glide down. Hidden ones wait
+   * off-screen to the right.
+   */
+  .notif {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    pointer-events: auto;
+    translate: 0 var(--y, 0px);
+    transition:
+      translate 520ms cubic-bezier(0.22, 1.2, 0.36, 1),
+      opacity 260ms ease;
+  }
+
+  .notif[hidden] {
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    translate: calc(100% + 32px) var(--y, 0px);
+    transition:
+      translate 360ms cubic-bezier(0.55, 0, 0.75, 0.25),
+      opacity 260ms ease,
+      visibility 0s 360ms;
+  }
+
+  /* Placed without animating (before it slides in) */
+  .notif.no-anim {
+    transition: none;
+  }
+
+  /* Figma: Liquid Glass - Notification (20px radius, 0 8 48 shadow) */
+  .notif__card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 14px 12px 10px;
+    border-radius: 20px;
+    background: var(--notif-fill);
+    border: 0.5px solid var(--notif-edge);
+    box-shadow: 0 8px 48px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    color: var(--notif-text);
+    font-family: var(--font-system);
+    text-align: left;
+    text-decoration: none;
+  }
+
+  .notif__card:focus-visible {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: 2px;
+  }
+
+  .notif__stack {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: -8px;
+    height: 40px;
+    border-radius: 20px;
+    background: var(--notif-fill);
+    border: 0.5px solid var(--notif-edge);
+    backdrop-filter: blur(30px) saturate(1.8);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  }
+
+  /* 32px app icon (the Dock's icons, scaled to fit), centred in a 4px-padded frame */
+  .notif__icon {
+    --dock-icon: 32px;
+    flex-shrink: 0;
+    align-self: center;
+    padding: 0 4px;
+  }
+
+  .notif__text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 16px;
+  }
+
+  .notif__title {
+    font-weight: 700;
+    letter-spacing: -0.26px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notif__body {
+    letter-spacing: -0.104px;
+  }
+
+  .notif__time {
+    flex-shrink: 0;
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--notif-time);
+  }
+
+  /* macOS shows a round close button on the top-left corner while hovering */
+  .notif__close {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--notif-fill);
+    border: 0.5px solid var(--notif-edge);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--notif-text);
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .notif__close svg {
+    width: 8px;
+    height: 8px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+  }
+
+  .notif:hover .notif__close,
+  .notif__close:focus-visible {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .notif__close {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notif,
+    .notif[hidden] {
+      translate: 0 var(--y, 0px);
+      transition: opacity 200ms ease, visibility 0s 200ms;
+    }
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-notifs]");
+
+  if (root) {
+    /** Wait before the first one, like the Mac settling down after you log in */
+    const START_DELAY = 10_000;
+    /** Between arrivals */
+    const STAGGER = 2_600;
+    /** How long each stays up (longer while the pointer rests on them) */
+    const LIFETIME = 14_000;
+    /** Space between banners, as in Figma */
+    const GAP = 16;
+
+    const notifs = [...root.querySelectorAll<HTMLElement>("[data-notif]")];
+    const byId = (id: string) => notifs.find((n) => n.dataset.notif === id)!;
+
+    /*
+     * The meeting is the next working day at 2 PM: tomorrow from Sunday to Thursday, Monday from
+     * Friday or Saturday. The calendar icon shows that day; the text says "Tomorrow" or names it.
+     */
+    const setMeetingDay = () => {
+      const now = new Date();
+      const ahead = now.getDay() === 5 ? 3 : now.getDay() === 6 ? 2 : 1;
+      const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ahead);
+      const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(day);
+      const weekdayLong = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(day);
+      root.querySelectorAll("[data-meeting-weekday]").forEach((el) => (el.textContent = weekday));
+      root.querySelectorAll("[data-meeting-date]").forEach((el) => (el.textContent = String(day.getDate())));
+      const when = root.querySelector("[data-meeting-when]");
+      if (when) when.textContent = `${ahead === 1 ? "Tomorrow" : weekdayLong} at 2:00 PM`;
+    };
+
+    /** Stack the showing banners top to bottom in Figma order */
+    const layout = () => {
+      let y = 0;
+      for (const notif of notifs) {
+        notif.style.setProperty("--y", `${y}px`);
+        if (!notif.hidden) y += notif.offsetHeight + GAP;
+      }
+    };
+
+    const timers = new WeakMap<HTMLElement, number>();
+
+    const dismiss = (notif: HTMLElement) => {
+      if (notif.hidden) return;
+      window.clearTimeout(timers.get(notif));
+      notif.hidden = true;
+      layout();
+    };
+
+    /** Go away after a while, but never while the pointer is over the notifications */
+    const scheduleDismiss = (notif: HTMLElement, delay = LIFETIME) => {
+      window.clearTimeout(timers.get(notif));
+      timers.set(
+        notif,
+        window.setTimeout(() => {
+          if (root.matches(":hover")) scheduleDismiss(notif, 2_000);
+          else dismiss(notif);
+        }, delay),
+      );
+    };
+
+    const show = (notif: HTMLElement) => {
+      if (notif.dataset.notif === "meeting") setMeetingDay();
+      // Put it in its slot (still off to the right) without animating, then slide it in
+      notif.classList.add("no-anim");
+      notif.hidden = false;
+      layout();
+      notif.hidden = true;
+      void notif.offsetWidth;
+      notif.classList.remove("no-anim");
+      notif.hidden = false;
+      layout();
+      scheduleDismiss(notif);
+    };
+
+    for (const notif of notifs) {
+      notif.querySelector("[data-notif-close]")?.addEventListener("click", () => dismiss(notif));
+      // Clicking a notification does its thing (link / window) and clears it
+      notif.querySelector(".notif__card")?.addEventListener("click", () => dismiss(notif));
+    }
+
+    // Newest on top: the bottom one arrives first, so they end up in the Figma order
+    const arrivals = ["figma", "meeting", "linkedin"].map(byId);
+    window.setTimeout(() => {
+      arrivals.forEach((notif, i) => window.setTimeout(() => show(notif), i * STAGGER));
+    }, START_DELAY);
+
+    addEventListener("resize", layout);
+  }
+</script>

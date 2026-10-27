@@ -1,0 +1,387 @@
+---
+/*
+ * Figma: client project template (Driven 6465:10085 and siblings).
+ * Header (intro + details) · Scope · image grid · "Want to see more?" · booking CTA
+ */
+import ProjectShot from "./ProjectShot.astro";
+import BookingCta from "./BookingCta.astro";
+import { cards, projectName, projects, type Project } from "../data/projects";
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+
+// Card widths at the full 840px window (776px content column, 16px gaps)
+const full = 776;
+const half = (full - 16) / 2;
+const third = (full - 32) / 3;
+const quarter = (full - 48) / 4;
+
+const details = [
+  ["Project Name", project.name],
+  ["Timeline", project.timeline],
+  ["Role", project.role],
+];
+
+// "Want to see more?" candidates: this project's preferred picks first, then every other project.
+// All are rendered; scripts/windows.ts shows the first two that aren't open on the desktop.
+const SUGGESTIONS = 2;
+const others = projects.map((p) => p.id).filter((id) => id !== project.id);
+const candidates = [...new Set([...project.seeMore, ...others])].filter((id) => others.includes(id));
+---
+
+<article class="case">
+  <header class="case__header">
+    <div class="case__intro">
+      <p class="case__label">Introduction</p>
+      <p class="case__lede">{project.intro}</p>
+    </div>
+    <div class="case__details">
+      <p class="case__label">Details</p>
+      <dl class="case__rows">
+        {
+          details.map(([term, value]) => (
+            <div class="case__row">
+              <dt>{term}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))
+        }
+        <div class="case__row">
+          <dt>Website</dt>
+          <dd>
+            {
+              project.website.url ? (
+                <a href={project.website.url} target="_blank" rel="noopener">
+                  {project.website.label}
+                </a>
+              ) : (
+                project.website.label
+              )
+            }
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="case__scope">
+    <p class="case__label">Scope</p>
+    <ol class="case__rows case__rows--scope">
+      {
+        project.scope.map((item, i) => (
+          <li class="case__row">
+            <span>{item}</span>
+            <span class="case__index">{String(i + 1).padStart(2, "0")}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="case__gallery">
+    {
+      project.gallery.map((row) => {
+        switch (row.layout) {
+          case "text":
+            return (
+              <div class="case__note">
+                <p class="case__note-title">{row.title}</p>
+                {row.body && <p class="case__note-body">{row.body}</p>}
+              </div>
+            );
+          case "1":
+            return <ProjectShot shot={row.shots[0]} aspect="736 / 450" cardWidth={full} />;
+          case "2":
+            return (
+              <div class="case__grid case__grid--2">
+                {row.shots.map((shot) => (
+                  <ProjectShot shot={shot} aspect="360 / 250" cardWidth={half} />
+                ))}
+              </div>
+            );
+          case "3":
+            return (
+              <div class="case__grid case__grid--3">
+                <ProjectShot shot={row.shots[0]} aspect={row.aspects[0]} cardWidth={third} />
+                <ProjectShot shot={row.shots[1]} aspect={row.aspects[1]} cardWidth={third * 2 + 16} span={2} />
+              </div>
+            );
+          case "4":
+            return (
+              <div class="case__grid case__grid--4">
+                <ProjectShot shot={row.shots[0]} aspect="172 / 250" cardWidth={quarter} />
+                <ProjectShot shot={row.shots[1]} aspect="172 / 250" cardWidth={quarter} />
+                <ProjectShot shot={row.shots[2]} aspect="360 / 250" cardWidth={half} span={2} />
+              </div>
+            );
+        }
+      })
+    }
+  </section>
+
+  <section class="case__more" data-see-more>
+    <p class="case__heading">Want to see more?</p>
+    <div class="case__grid case__grid--2">
+      {
+        candidates.map((id, index) => (
+          <button
+            class="case__more-card"
+            type="button"
+            data-open-window={id}
+            data-see-more-id={id}
+            hidden={index >= SUGGESTIONS}
+          >
+            <ProjectShot shot={cards[id]} aspect="360 / 250" cardWidth={half} />
+            <span class="case__label">{projectName(id)}</span>
+          </button>
+        ))
+      }
+    </div>
+  </section>
+
+  <BookingCta />
+</article>
+
+<style>
+  /* Figma: 32px padding, 32px between sections */
+  .case {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-800);
+    width: 100%;
+    max-width: 1200px; /* very wide windows centre the content instead of stretching lines */
+    margin: 0 auto;
+    padding: var(--space-800);
+    color: var(--content-text);
+  }
+
+  .case p {
+    margin: 0;
+  }
+
+  /*
+   * Image protection: no dragging, no selecting, and no "Save image as…" / "Copy image"
+   * (right-clicks and long-presses land on the card behind the image, not the image itself).
+   */
+  .case :global(img) {
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Subheadline/Regular 11/14 */
+  .case__label {
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+  }
+
+  .case__header {
+    display: flex;
+    gap: var(--space-1600);
+    align-items: flex-start;
+  }
+
+  .case__intro {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-400);
+  }
+
+  /* Title 1/Regular 22/26 */
+  .case__lede {
+    font-size: var(--text-title-1);
+    line-height: var(--leading-title-1);
+  }
+
+  .case__details {
+    flex: 0 0 240px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-400);
+  }
+
+  .case__rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .case__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-400);
+    padding: var(--space-200) 0;
+    border-top: 1px solid var(--content-rule);
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+  }
+
+  .case__row dt {
+    color: var(--content-tertiary);
+  }
+
+  .case__row dd {
+    margin: 0;
+    text-align: right;
+  }
+
+  .case__row a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .case__row a:hover {
+    text-decoration: underline;
+  }
+
+  .case__scope {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-400);
+  }
+
+  /* Title 3/Regular 15/20 */
+  .case__rows--scope .case__row {
+    font-size: var(--text-title-3);
+    line-height: var(--leading-title-3);
+  }
+
+  .case__index {
+    color: var(--content-tertiary);
+  }
+
+  .case__gallery {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-400);
+  }
+
+  .case__grid {
+    display: grid;
+    gap: var(--space-400);
+  }
+
+  .case__grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .case__grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Cards keep their own heights (Figma: 250 beside 517) instead of stretching to the row */
+    align-items: start;
+  }
+  .case__grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* Figma: Img Grid2 intro, 16px top / 32px bottom, 200px title column */
+  .case__note {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-400) 0 var(--space-800);
+  }
+
+  .case__note-title {
+    flex: 0 0 200px;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .case__note-body {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+  }
+
+  .case__more {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-800);
+    padding: var(--space-800) 0;
+  }
+
+  .case__heading {
+    font-size: var(--text-title-1);
+    line-height: var(--leading-title-1);
+  }
+
+  .case__more-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-400);
+    text-align: left;
+  }
+
+  /* Suggestions for projects that are already open are swapped out (see scripts/windows.ts) */
+  .case__more[hidden],
+  .case__more-card[hidden] {
+    display: none;
+  }
+
+  .case__more-card:not([hidden]) {
+    animation: card-in 260ms ease-out;
+  }
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+
+  .case__more-card :global(.shot) {
+    width: 100%;
+    transition: scale 200ms ease;
+  }
+
+  .case__more-card:hover :global(.shot) {
+    scale: 1.015;
+  }
+
+  /* Narrow windows: stack the header */
+  @container window (max-width: 640px) {
+    .case__header {
+      flex-direction: column;
+      gap: var(--space-800);
+    }
+    .case__details {
+      flex-basis: auto;
+      width: 100%;
+    }
+  }
+
+  /* Phone-width windows: tighter padding, smaller lede, no 3- or 4-up image rows */
+  @container window (max-width: 520px) {
+    .case {
+      padding: var(--space-20);
+      gap: var(--space-400);
+    }
+    .case__lede,
+    .case__heading {
+      font-size: 18px;
+      line-height: 23px;
+    }
+    /* The 1/3 + 2/3 row just scales down; its card proportions are the design */
+    .case__grid--4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .case__note {
+      flex-direction: column;
+      gap: var(--space-200);
+    }
+    .case__note-title {
+      flex-basis: auto;
+    }
+    .case__more {
+      gap: var(--space-400);
+    }
+  }
+</style>

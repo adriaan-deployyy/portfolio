@@ -1,0 +1,63 @@
+---
+import { Image } from "astro:assets";
+import type { Shot } from "../data/projects";
+
+interface Props {
+  shot: Shot;
+  /** Card aspect ratio from Figma, e.g. "736 / 450" */
+  aspect: string;
+  /** Rendered card width in CSS px at the 840px window, used to pick image sizes */
+  cardWidth: number;
+  span?: number;
+}
+
+const { shot, aspect, cardWidth, span = 1 } = Astro.props;
+const { crop } = shot;
+
+// Size the srcset for how wide the image actually renders: crops can be wider than the card,
+// and a cover image in a tall card is scaled by height, so it overflows the card's width
+const [ratioW, ratioH] = aspect.split("/").map(Number);
+const cardHeight = (cardWidth * ratioH) / ratioW;
+const coverWidth = Math.max(cardWidth, cardHeight * (shot.src.width / shot.src.height));
+const renderWidth = Math.ceil(crop ? cardWidth * (Math.max(crop.width, 100) / 100) : coverWidth);
+const widths = [renderWidth, renderWidth * 2].map((w) => Math.min(w, shot.src.width));
+const cropStyle = crop
+  ? { left: `${crop.left}%`, top: `${crop.top}%`, width: `${crop.width}%`, height: `${crop.height}%` }
+  : undefined;
+---
+
+<div class="shot" style={{ aspectRatio: aspect, background: shot.bg, gridColumn: span > 1 ? `span ${span}` : undefined }}>
+  <Image
+    class:list={["shot__img", { "shot__img--crop": crop }]}
+    src={shot.src}
+    alt=""
+    widths={[...new Set(widths)]}
+    sizes={`${renderWidth}px`}
+    style={cropStyle}
+    loading="lazy"
+    decoding="async"
+    draggable="false"
+  />
+</div>
+
+<style>
+  .shot {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-200);
+  }
+
+  .shot__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+  }
+
+  .shot__img--crop {
+    inset: auto;
+    object-fit: fill;
+  }
+</style>

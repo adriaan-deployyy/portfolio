@@ -1,0 +1,68 @@
+---
+import Base from "../layouts/Base.astro";
+import Wallpaper from "../components/Wallpaper.astro";
+import MenuBar from "../components/MenuBar.astro";
+import Dock from "../components/Dock.astro";
+import Spotlight from "../components/Spotlight.astro";
+import Notifications from "../components/Notifications.astro";
+import DesktopIcons from "../components/DesktopIcons.astro";
+import Window from "../components/Window.astro";
+import CaseStudy from "../components/CaseStudy.astro";
+import FinderApp from "../components/FinderApp.astro";
+import CalendlyApp from "../components/CalendlyApp.astro";
+import CvApp from "../components/CvApp.astro";
+import MusicApp from "../components/MusicApp.astro";
+import PhotosApp from "../components/PhotosApp.astro";
+import NotesApp from "../components/NotesApp.astro";
+import CvDownload from "../components/CvDownload.astro";
+import { projects } from "../data/projects";
+import { cv } from "../data/cv";
+---
+
+<Base title="Adriaan Myburgh — Designer">
+  <Wallpaper />
+  <MenuBar />
+  <main class="desktop" aria-label="Desktop">
+    <DesktopIcons />
+    {
+      projects.map((project) => (
+        <Window id={project.id} title={project.name}>
+          <CaseStudy project={project} />
+        </Window>
+      ))
+    }
+    <Window id="finder" title="Finder" width={760} height={480}>
+      <FinderApp />
+    </Window>
+    <Window id="calendly" title="Calendly — Book a 20 Minute Chat" width={680} height={760} chrome="overlay">
+      <CalendlyApp />
+    </Window>
+    <Window id="notes" title="Notes" width={900} height={620}>
+      <NotesApp />
+    </Window>
+    <Window id="photos" title="Photos" width={960} height={640}>
+      <PhotosApp />
+    </Window>
+    <Window id="music" title="YouTube Music" width={1062} height={870}>
+      <MusicApp />
+    </Window>
+    <Window id={cv.id} title={cv.title} width={720} height={820}>
+      <CvApp />
+      <CvDownload slot="toolbar" />
+    </Window>
+  </main>
+  <Dock />
+  <Notifications />
+  <Spotlight />
+</Base>
+
+<script>
+  import "../scripts/windows.ts";
+</script>
+
+<style>
+  .desktop {
+    position: fixed;
+    inset: var(--menubar-height) 0 0;
+  }
+</style>

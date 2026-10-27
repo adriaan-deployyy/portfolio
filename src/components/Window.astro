@@ -1,0 +1,405 @@
+---
+/*
+ * Figma: "Windows - Composed" (light 6465:2080, dark 6465:2116).
+ * 16px corners, 31px title bar that content scrolls under, traffic lights, 12px scrollbar gutter.
+ * Behaviour (open, drag, focus, close, minimise, zoom) lives in scripts/windows.ts.
+ */
+interface Props {
+  id: string;
+  title: string;
+  /** Default size in px (case studies use 840 x 720); always capped to the screen */
+  width?: number;
+  height?: number;
+  /**
+   * "overlay": no window frame or title bar fill; the controls and title float over the
+   * content, and the window is a fixed size (no resize edges, zoom greyed out). Used for the
+   * Calendly pop-up, where Calendly's own booking card is the whole window.
+   */
+  chrome?: "default" | "overlay";
+}
+
+const { id, title, width, height, chrome = "default" } = Astro.props;
+const overlay = chrome === "overlay";
+const size = {
+  "--win-w": width ? `${width}px` : undefined,
+  "--win-h": height ? `${height}px` : undefined,
+};
+---
+
+<section
+  class:list={["window", { "window--overlay": overlay }]}
+  data-window={id}
+  data-fixed-size={overlay ? "" : undefined} aria-label={title} role="dialog" style={size} hidden>
+  <header class="window__titlebar" data-drag-handle>
+    <div class="window__controls">
+      <button class="window__control window__control--close" type="button" aria-label="Close" data-action="close">
+        <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" /></svg>
+      </button>
+      <button class="window__control window__control--minimize" type="button" aria-label="Minimize" data-action="minimize">
+        <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.2 4h5.6" /></svg>
+      </button>
+      <button
+        class="window__control window__control--zoom"
+        type="button"
+        aria-label="Zoom"
+        data-action="zoom"
+        disabled={overlay}>
+        <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M4 1.2v5.6M1.2 4h5.6" /></svg>
+      </button>
+    </div>
+    <h2 class="window__title">{title}</h2>
+    <!-- Optional title bar buttons on the right (e.g. the CV's Download PDF) -->
+    <div class="window__toolbar"><slot name="toolbar" /></div>
+  </header>
+  <div class="window__content" tabindex="-1">
+    <slot />
+  </div>
+  <!-- Resize from any edge or corner, like macOS -->
+  {
+    !overlay &&
+    ["n", "e", "s", "w", "ne", "se", "sw", "nw"].map((edge) => (
+      <span class={`window__resize window__resize--${edge}`} data-resize={edge} aria-hidden="true" />
+    ))
+  }
+</section>
+
+<style>
+  .window {
+    --titlebar-height: 31px;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    width: min(var(--win-w, 840px), calc(100vw - 24px));
+    height: min(var(--win-h, 720px), calc(100dvh - var(--menubar-height) - 110px));
+    border-radius: 16px;
+    overflow: clip;
+    background: var(--window-background);
+    color: var(--label-primary);
+    box-shadow: var(--window-shadow);
+    border: var(--window-border);
+    transform-origin: 50% 100%;
+    transition:
+      left 240ms ease,
+      top 240ms ease,
+      width 240ms ease,
+      height 240ms ease;
+  }
+
+  .window[hidden] {
+    display: none;
+  }
+
+  .window.is-dragging,
+  .window.is-resizing {
+    transition: none;
+    user-select: none;
+  }
+
+  /* Invisible grab strips along each edge; corners are larger so they're easy to hit */
+  .window__resize {
+    position: absolute;
+    z-index: 3;
+    touch-action: none;
+  }
+
+  .window__resize--n,
+  .window__resize--s {
+    left: 12px;
+    right: 12px;
+    height: 6px;
+    cursor: ns-resize;
+  }
+  .window__resize--n {
+    top: 0;
+  }
+  .window__resize--s {
+    bottom: 0;
+  }
+
+  .window__resize--e,
+  .window__resize--w {
+    top: 12px;
+    bottom: 12px;
+    width: 6px;
+    cursor: ew-resize;
+  }
+  .window__resize--e {
+    right: 0;
+  }
+  .window__resize--w {
+    left: 0;
+  }
+
+  .window__resize--ne,
+  .window__resize--se,
+  .window__resize--sw,
+  .window__resize--nw {
+    width: 14px;
+    height: 14px;
+  }
+  .window__resize--ne {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+  }
+  .window__resize--se {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+  }
+  .window__resize--sw {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+  }
+  .window__resize--nw {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+  }
+
+  /* The top-left corner sits on the traffic lights; keep those clickable */
+  .window__resize--nw {
+    width: 6px;
+    height: 6px;
+  }
+
+  .window.is-zoomed .window__resize {
+    display: none;
+  }
+
+  .window.is-opening {
+    animation: window-open 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+
+  .window.is-closing {
+    animation: window-close 160ms ease-in forwards;
+  }
+
+  .window.is-minimizing {
+    animation: window-minimize 320ms ease-in forwards;
+  }
+
+  .window.is-zoomed {
+    border-radius: 10px;
+  }
+
+  @keyframes window-open {
+    from {
+      opacity: 0;
+      scale: 0.94;
+    }
+  }
+
+  @keyframes window-close {
+    to {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  @keyframes window-minimize {
+    to {
+      opacity: 0;
+      scale: 0.15;
+      translate: 0 60vh;
+    }
+  }
+
+  /* Figma: Scroll Edge Effect - Hard */
+  .window__titlebar {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: var(--titlebar-height);
+    padding: 8px;
+    background: var(--titlebar-fill);
+    border-bottom: 0.67px solid var(--titlebar-edge);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    user-select: none;
+    touch-action: none;
+  }
+
+  /* 12px controls, 6px apart, solid fills with no outline (adjusted from the Figma kit's 14px / 9px) */
+  .window__controls {
+    display: flex;
+    gap: 6px;
+    padding-right: 8px;
+  }
+
+  .window__control {
+    display: grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .window__control--close {
+    background: #ff5c60;
+  }
+  .window__control--minimize {
+    background: #fac800;
+  }
+  .window__control--zoom {
+    background: #35c759;
+  }
+
+  .window__control svg {
+    width: 7px;
+    height: 7px;
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    opacity: 0;
+  }
+
+  .window__controls:hover svg,
+  .window__control:focus-visible svg {
+    opacity: 1;
+  }
+
+  .window:not(.is-active) .window__control {
+    background: var(--control-inactive);
+  }
+
+  .window:not(.is-active) .window__controls:hover .window__control--close {
+    background: #ff5c60;
+  }
+  .window:not(.is-active) .window__controls:hover .window__control--minimize {
+    background: #fac800;
+  }
+  .window:not(.is-active) .window__controls:hover .window__control--zoom {
+    background: #35c759;
+  }
+
+  .window__title {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--label-primary);
+  }
+
+  .window:not(.is-active) .window__title {
+    opacity: 0.5;
+  }
+
+  .window__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .window__toolbar:empty {
+    display: none;
+  }
+
+  /*
+   * Overlay chrome: no window frame, the content is the whole pop-up (Calendly's booking card,
+   * edge to edge; 8px corners match the card). The title bar has no fill, edge or blur, and only
+   * spans the controls and title, so the content stays clickable; content scrolls under it.
+   * It always sits on white here, so the title stays dark in both themes.
+   */
+  .window--overlay {
+    border: 0;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  /* The card is the pop-up: no scrollbar gutter beside it (wheel, trackpad and touch still scroll) */
+  .window--overlay .window__content {
+    scrollbar-width: none;
+  }
+
+  .window--overlay .window__content::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Fixed-size windows can't zoom; macOS greys the button out */
+  .window--overlay .window__control--zoom,
+  .window--overlay .window__controls:hover .window__control--zoom {
+    background: #dcdcdc;
+  }
+
+  .window--overlay .window__control--zoom svg {
+    display: none;
+  }
+
+  .window--overlay .window__titlebar {
+    right: auto;
+    background: none;
+    border-bottom: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .window--overlay .window__title {
+    color: rgba(0, 0, 0, 0.85);
+  }
+
+  .window--overlay:not(.is-active) .window__control {
+    background: #dcdcdc;
+  }
+
+  .window--overlay .window__content {
+    padding-top: 0;
+  }
+
+  .window--overlay .window__content::-webkit-scrollbar-track {
+    margin-top: 0;
+  }
+
+  .window__content {
+    flex: 1;
+    min-height: 0;
+    padding-top: var(--titlebar-height);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    outline: none;
+    container: window / inline-size;
+  }
+
+  /* Figma: Scrollbar - Vertical, 6px thumb in a 12px gutter */
+  @supports not selector(::-webkit-scrollbar) {
+    .window__content {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) transparent;
+    }
+  }
+
+  .window__content::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  .window__content::-webkit-scrollbar-thumb {
+    background: var(--scrollbar);
+    border-radius: 1000px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .window__content::-webkit-scrollbar-track {
+    margin-top: var(--titlebar-height);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .window {
+      transition: none;
+    }
+    .window.is-opening,
+    .window.is-closing,
+    .window.is-minimizing {
+      animation-duration: 1ms;
+    }
+  }
+</style>

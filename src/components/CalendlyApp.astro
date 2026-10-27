@@ -1,0 +1,140 @@
+---
+/*
+ * Calendly as a pop-up (opened from the Dock and the case study booking card). There's no window
+ * frame: Calendly's own booking card is the whole pop-up, with the window controls floating on it.
+ * The booking page loads only the first time the pop-up opens, so it costs nothing until then.
+ */
+import { links } from "../data/dock";
+---
+
+<div class="calendly" data-calendly>
+  <p class="calendly__loading" aria-hidden="true">Loading Calendly…</p>
+  <iframe
+    class="calendly__frame"
+    title="Book a 20-minute chat with Adriaan"
+    data-src={links.calendly}
+    scrolling="no"
+    allow="payment"
+    referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  <noscript>
+    <a href={links.calendly} target="_blank" rel="noopener">Open Calendly in a new tab</a>
+  </noscript>
+</div>
+
+<style>
+  /*
+   * Fills the pop-up while loading; then takes the card's height (set by the script), and the
+   * pop-up scrolls it. Clips Calendly's page margins around the card.
+   */
+  .calendly {
+    position: relative;
+    height: var(--card-h, 100%);
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .calendly.is-loaded .calendly__loading {
+    display: none;
+  }
+
+  .calendly__loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    font-size: var(--text-body);
+    color: rgba(0, 0, 0, 0.45);
+  }
+
+  /* Positioned by the script below so only Calendly's card shows */
+  .calendly__frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+</style>
+
+<script>
+  /*
+   * Calendly's embed page is transparent, with its white booking card centred inside page
+   * margins. To make that card the whole pop-up:
+   *   - the iframe is as tall as Calendly's whole page, so Calendly never scrolls itself (and
+   *     never shows its own scrollbar); the pop-up scrolls instead, under the floating controls;
+   *   - it's shifted up and left, and made wider than the pop-up, so the card lines up with the
+   *     pop-up's edges and the page margins around it are clipped away.
+   * Calendly's layout, measured on its embed page:
+   *   - at 640px wide and up, the card is 95% of the page width (680px at most), centred,
+   *     66px from the top and 30px from the bottom;
+   *   - narrower than that, there's no card: the page is white edge to edge.
+   * The pop-up is 680px wide, so the card is a single column and keeps that width as the visitor
+   * picks a date and fills in the form; only its height changes, which Calendly reports with
+   * "calendly.page_height" messages.
+   */
+  const CARD_RATIO = 0.95;
+  const CARD_BREAKPOINT = 640;
+  const MARGIN_TOP = 66;
+  const MARGIN_BOTTOM = 30;
+  const TITLEBAR = 31;
+  const CALENDLY_ORIGIN = "https://calendly.com";
+
+  const box = document.querySelector<HTMLElement>("[data-calendly]");
+  const frame = box?.querySelector<HTMLIFrameElement>(".calendly__frame");
+  const win = box?.closest<HTMLElement>("[data-window]");
+
+  if (box && frame && win) {
+    let pageHeight = 0;
+
+    const layout = () => {
+      if (!pageHeight) return;
+      const width = box.clientWidth;
+      const pageWidth = width / CARD_RATIO;
+      const card = pageWidth >= CARD_BREAKPOINT;
+      // The card has room above its content for the controls; the edge-to-edge page doesn't,
+      // so there it starts below a title-bar-high strip
+      const top = card ? -MARGIN_TOP : TITLEBAR;
+      const cardHeight = Math.ceil(pageHeight + (card ? -MARGIN_TOP - MARGIN_BOTTOM : TITLEBAR));
+
+      Object.assign(frame.style, {
+        left: card ? `${-(pageWidth - width) / 2}px` : "0px",
+        top: `${top}px`,
+        width: `${card ? pageWidth : width}px`,
+        height: `${Math.ceil(pageHeight)}px`,
+      });
+      box.style.setProperty("--card-h", `${cardHeight}px`);
+      // Fit the pop-up to the card (the window CSS still caps it to the screen; then it scrolls)
+      win.style.setProperty("--win-h", `${cardHeight}px`);
+    };
+
+    new ResizeObserver(layout).observe(box);
+
+    addEventListener("message", (event) => {
+      if (event.origin !== CALENDLY_ORIGIN || event.data?.event !== "calendly.page_height") return;
+      const height = parseFloat(event.data.payload?.height);
+      // Ignore the tiny heights Calendly reports while it's still loading
+      if (!(height > 200)) return;
+      pageHeight = height;
+      box.classList.add("is-loaded");
+      layout();
+    });
+
+    /*
+     * Load Calendly's inline embed the first time the pop-up opens (scripts/windows.ts announces
+     * every open/close with a "windows:change" event). embed_domain/embed_type tell Calendly it's
+     * embedded, so it drops its own page chrome.
+     */
+    document.addEventListener("windows:change", (event) => {
+      const open: string[] = (event as CustomEvent).detail.open;
+      if (frame.src || !open.includes("calendly")) return;
+      const url = new URL(frame.dataset.src!);
+      url.searchParams.set("embed_domain", location.hostname);
+      url.searchParams.set("embed_type", "Inline");
+      url.searchParams.set("hide_gdpr_banner", "1");
+      frame.src = url.toString();
+    });
+  }
+</script>

@@ -1,0 +1,699 @@
+---
+/*
+ * Photos, opened from the Dock: the photos from Figma's "Photos" section, shown like the macOS
+ * Photos app.
+ *   - Library: a grid of square thumbnails, 2px apart, sized with the zoom slider.
+ *     Click selects a photo; double-click (or Return / Space, or a tap on touch screens) opens it.
+ *   - Photo view: the photo fitted to the window, with back, a heart, and previous / next
+ *     (arrow keys too; Escape goes back to the grid).
+ *   - Favourites: photos with a heart, remembered in this browser.
+ */
+import { Image, getImage } from "astro:assets";
+import { photos } from "../data/photos";
+
+// Full-size versions for the photo view, loaded only when a photo is opened
+const full = await Promise.all(photos.map((photo) => getImage({ src: photo.image, widths: [1200, 2400], format: "webp" })));
+
+const count = (n: number) => `${n} ${n === 1 ? "Photo" : "Photos"}`;
+---
+
+<div class="photos" data-photos data-mode="grid" data-view="library">
+  <aside class="photos__sidebar" aria-label="Photos">
+    <p class="photos__group">Photos</p>
+    <button class="photos__place is-active" type="button" data-place="library" aria-pressed="true">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <rect x="1.75" y="1.75" width="5.5" height="5.5" rx="1.25" /><rect x="8.75" y="1.75" width="5.5" height="5.5" rx="1.25" />
+        <rect x="1.75" y="8.75" width="5.5" height="5.5" rx="1.25" /><rect x="8.75" y="8.75" width="5.5" height="5.5" rx="1.25" />
+      </svg>
+      <span class="photos__place-name">Library</span>
+      <span class="photos__count">{photos.length}</span>
+    </button>
+    <button class="photos__place" type="button" data-place="favourites" aria-pressed="false">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 13.6 2.9 8.7A3.2 3.2 0 0 1 8 4.6a3.2 3.2 0 0 1 5.1 4.1Z" />
+      </svg>
+      <span class="photos__place-name">Favourites</span>
+      <span class="photos__count" data-photos-fav-count>0</span>
+    </button>
+  </aside>
+
+  <section class="photos__main">
+    <!-- Toolbar: title and zoom in the grid; back, position and heart in the photo view -->
+    <header class="photos__toolbar">
+      <button class="photos__tool photos__back" type="button" data-photos-back aria-label="Back to Library">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
+      </button>
+      <div class="photos__titles">
+        <h3 class="photos__title" data-photos-title>Library</h3>
+        <span class="photos__subtitle" data-photos-subtitle aria-live="polite">{count(photos.length)}</span>
+      </div>
+      <label class="photos__zoom">
+        <span aria-hidden="true">−</span>
+        <input type="range" min="0" max="4" step="1" value="2" aria-label="Thumbnail size" data-photos-zoom />
+        <span aria-hidden="true">+</span>
+      </label>
+      <button class="photos__tool photos__heart" type="button" data-photos-heart aria-pressed="false" aria-label="Favourite">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8 13.6 2.9 8.7A3.2 3.2 0 0 1 8 4.6a3.2 3.2 0 0 1 5.1 4.1Z" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="photos__body">
+      <ul class="photos__grid" data-photos-grid aria-label="Photos">
+        {
+          photos.map((photo, i) => (
+            <li class="photos__cell" data-photos-cell>
+              <button
+                class="photos__tile"
+                type="button"
+                data-index={i}
+                data-full-src={full[i].src}
+                data-full-srcset={full[i].srcSet.attribute}
+                data-alt={photo.alt}
+                aria-label={photo.alt}
+              >
+                <Image
+                  class="photos__thumb"
+                  src={photo.image}
+                  alt=""
+                  widths={[260, 520]}
+                  sizes="260px"
+                  loading="lazy"
+                  draggable="false"
+                />
+                <svg class="photos__fav-badge" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M8 13.6 2.9 8.7A3.2 3.2 0 0 1 8 4.6a3.2 3.2 0 0 1 5.1 4.1Z" />
+                </svg>
+              </button>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="photos__empty" data-photos-empty hidden>
+        <p class="photos__empty-title">No Favourites</p>
+        <p>Open a photo and click the heart to add it here.</p>
+      </div>
+
+      <!-- Photo view -->
+      <div class="photos__viewer" data-photos-viewer hidden>
+        <img class="photos__photo" data-photos-photo alt="" draggable="false" />
+        <button class="photos__step photos__step--prev" type="button" data-photos-step="-1" aria-label="Previous photo">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
+        </button>
+        <button class="photos__step photos__step--next" type="button" data-photos-step="1" aria-label="Next photo">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+  .photos {
+    --photos-rule: color-mix(in srgb, var(--label-primary) 10%, transparent);
+    --photos-muted: color-mix(in srgb, var(--label-primary) 55%, transparent);
+    --photos-hover: color-mix(in srgb, var(--label-primary) 7%, transparent);
+    --photos-selected: color-mix(in srgb, var(--label-primary) 11%, transparent);
+    --photos-heart: #ff375f;
+    --tile: 136px;
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    height: 100%;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    color: var(--label-primary);
+    user-select: none;
+  }
+
+  .photos svg {
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Sidebar, like Finder's */
+  .photos__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 10px 8px;
+    background: color-mix(in srgb, var(--label-primary) 4%, transparent);
+    border-right: 1px solid var(--photos-rule);
+  }
+
+  .photos__group {
+    margin: 2px 8px 4px;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    font-weight: var(--weight-emphasized);
+    color: var(--photos-muted);
+  }
+
+  .photos__place {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 6px;
+    text-align: left;
+  }
+
+  .photos__place:hover {
+    background: var(--photos-hover);
+  }
+
+  .photos__place.is-active {
+    background: var(--photos-selected);
+    font-weight: var(--weight-emphasized);
+  }
+
+  .photos__place svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--accent-indigo);
+  }
+
+  .photos__place[data-place="favourites"] svg {
+    color: var(--photos-heart);
+  }
+
+  .photos__place-name {
+    flex: 1;
+  }
+
+  .photos__count {
+    font-size: var(--text-subheadline);
+    color: var(--photos-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Main column */
+  .photos__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .photos__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--photos-rule);
+  }
+
+  .photos__titles {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .photos__title {
+    margin: 0;
+    font-size: 15px;
+    line-height: 19px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .photos__subtitle {
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    color: var(--photos-muted);
+  }
+
+  .photos__tool {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 28px;
+    border-radius: 6px;
+  }
+
+  .photos__tool:hover {
+    background: var(--photos-hover);
+  }
+
+  .photos__tool svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .photos__heart[aria-pressed="true"] svg {
+    fill: var(--photos-heart);
+    stroke: var(--photos-heart);
+  }
+
+  .photos__zoom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--photos-muted);
+  }
+
+  .photos__zoom input {
+    width: 96px;
+    accent-color: var(--accent-indigo);
+  }
+
+  /* The toolbar shows what the current mode needs */
+  .photos[data-mode="grid"] .photos__back,
+  .photos[data-mode="grid"] .photos__heart,
+  .photos[data-mode="photo"] .photos__zoom {
+    display: none;
+  }
+
+  /* Grid: square tiles, 2px apart, as in Photos' "All Photos" */
+  .photos__body {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .photos__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr));
+    gap: 2px;
+    height: 100%;
+    margin: 0;
+    padding: 2px;
+    list-style: none;
+    overflow-y: auto;
+    align-content: start;
+    overscroll-behavior: contain;
+  }
+
+  .photos__cell[hidden] {
+    display: none;
+  }
+
+  .photos__tile {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
+    overflow: hidden;
+    background: var(--photos-hover);
+    -webkit-touch-callout: none;
+  }
+
+  .photos__thumb {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    -webkit-user-drag: none;
+    transition: filter 120ms ease;
+  }
+
+  .photos__tile:hover .photos__thumb {
+    filter: brightness(1.06);
+  }
+
+  /* Selected: the blue ring macOS draws inside the thumbnail */
+  .photos__tile.is-selected::after,
+  .photos__tile:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 3px var(--accent-indigo);
+    pointer-events: none;
+  }
+
+  .photos__tile:focus-visible {
+    outline: none;
+  }
+
+  /* Hearted photos carry a small white heart, bottom left */
+  .photos__fav-badge {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    width: 14px;
+    height: 14px;
+    fill: #ffffff;
+    stroke: #ffffff;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    opacity: 0;
+  }
+
+  .photos__tile.is-favourite .photos__fav-badge {
+    opacity: 1;
+  }
+
+  .photos__empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 4px;
+    text-align: center;
+    color: var(--photos-muted);
+  }
+
+  .photos__empty[hidden] {
+    display: none;
+  }
+
+  .photos__empty p {
+    margin: 0;
+  }
+
+  .photos__empty-title {
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 700;
+    color: var(--label-primary);
+  }
+
+  /* Photo view: the photo fitted inside the window, on the window's own background */
+  .photos__viewer {
+    position: absolute;
+    inset: 0;
+    padding: 16px;
+    overflow: hidden;
+    background: var(--window-background);
+  }
+
+  .photos__viewer[hidden] {
+    display: none;
+  }
+
+  /* Fills the view and letterboxes the photo inside it, whatever its shape */
+  .photos__photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    animation: photos-open 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+
+  @keyframes photos-open {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  /* Previous / next: round buttons at the sides, shown while the pointer is over the photo */
+  .photos__step {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    margin-top: -18px;
+    border-radius: 50%;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .photos__step svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.8;
+  }
+
+  .photos__step--prev {
+    left: 14px;
+  }
+
+  .photos__step--next {
+    right: 14px;
+  }
+
+  .photos__viewer:hover .photos__step:not(:disabled),
+  .photos__step:focus-visible {
+    opacity: 1;
+  }
+
+  .photos__step:disabled {
+    visibility: hidden;
+  }
+
+  @media (hover: none) {
+    .photos__step:not(:disabled) {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photos__photo {
+      animation: none;
+    }
+  }
+
+  /* Narrow windows: drop the sidebar (and the zoom label) like Finder does */
+  @container window (max-width: 560px) {
+    .photos {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .photos__sidebar {
+      display: none;
+    }
+    .photos__zoom input {
+      width: 72px;
+    }
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-photos]");
+
+  if (root) {
+    const STORAGE_KEY = "photos-favourites";
+    const ZOOM_TILES = [72, 100, 136, 184, 260];
+
+    const grid = root.querySelector<HTMLElement>("[data-photos-grid]")!;
+    const cells = [...root.querySelectorAll<HTMLElement>("[data-photos-cell]")];
+    const tiles = cells.map((cell) => cell.querySelector<HTMLButtonElement>(".photos__tile")!);
+    const places = [...root.querySelectorAll<HTMLButtonElement>("[data-place]")];
+    const title = root.querySelector<HTMLElement>("[data-photos-title]")!;
+    const subtitle = root.querySelector<HTMLElement>("[data-photos-subtitle]")!;
+    const favCount = root.querySelector<HTMLElement>("[data-photos-fav-count]")!;
+    const empty = root.querySelector<HTMLElement>("[data-photos-empty]")!;
+    const zoom = root.querySelector<HTMLInputElement>("[data-photos-zoom]")!;
+    const viewer = root.querySelector<HTMLElement>("[data-photos-viewer]")!;
+    const photo = root.querySelector<HTMLImageElement>("[data-photos-photo]")!;
+    const heart = root.querySelector<HTMLButtonElement>("[data-photos-heart]")!;
+    const back = root.querySelector<HTMLButtonElement>("[data-photos-back]")!;
+    const steps = [...root.querySelectorAll<HTMLButtonElement>("[data-photos-step]")];
+
+    const count = (n: number) => `${n} ${n === 1 ? "Photo" : "Photos"}`;
+
+    // Favourites are remembered in this browser only
+    const favourites = new Set<number>(
+      (() => {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as number[];
+        } catch {
+          return [];
+        }
+      })(),
+    );
+    const saveFavourites = () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...favourites]));
+      } catch {}
+    };
+
+    let view: "library" | "favourites" = "library";
+    let selected = -1;
+    let current = -1;
+
+    /** Photos in the current place (Library or Favourites), in order */
+    const visible = () => tiles.map((_, i) => i).filter((i) => view === "library" || favourites.has(i));
+
+    const select = (index: number, focus = false) => {
+      selected = index;
+      tiles.forEach((tile, i) => tile.classList.toggle("is-selected", i === index));
+      if (focus && index >= 0) tiles[index].focus({ preventScroll: false });
+    };
+
+    /** Show the place's photos and update the titles and counts */
+    const render = () => {
+      const shown = visible();
+      cells.forEach((cell, i) => (cell.hidden = !shown.includes(i)));
+      tiles.forEach((tile, i) => tile.classList.toggle("is-favourite", favourites.has(i)));
+      favCount.textContent = String(favourites.size);
+      empty.hidden = shown.length > 0;
+      if (root.dataset.mode === "grid") {
+        title.textContent = view === "library" ? "Library" : "Favourites";
+        subtitle.textContent = count(shown.length);
+      }
+      if (!shown.includes(selected)) select(-1);
+    };
+
+    const updateViewer = () => {
+      const shown = visible();
+      const position = shown.indexOf(current);
+      const tile = tiles[current];
+      photo.alt = tile.dataset.alt!;
+      photo.srcset = tile.dataset.fullSrcset!;
+      photo.sizes = `${Math.ceil(viewer.clientWidth)}px`;
+      photo.src = tile.dataset.fullSrc!;
+      // Restart the open animation for each photo
+      photo.style.animation = "none";
+      void photo.offsetWidth;
+      photo.style.animation = "";
+      title.textContent = tile.dataset.alt!;
+      subtitle.textContent = `${position + 1} of ${shown.length}`;
+      heart.setAttribute("aria-pressed", String(favourites.has(current)));
+      heart.setAttribute("aria-label", favourites.has(current) ? "Unfavourite" : "Favourite");
+      steps[0].disabled = position <= 0;
+      steps[1].disabled = position >= shown.length - 1;
+    };
+
+    const openPhoto = (index: number) => {
+      current = index;
+      select(index);
+      root.dataset.mode = "photo";
+      viewer.hidden = false;
+      updateViewer();
+      back.focus({ preventScroll: true });
+    };
+
+    const closePhoto = () => {
+      if (root.dataset.mode !== "photo") return;
+      root.dataset.mode = "grid";
+      viewer.hidden = true;
+      photo.removeAttribute("src");
+      photo.removeAttribute("srcset");
+      render();
+      if (!cells[current].hidden) select(current, true);
+    };
+
+    const step = (by: number) => {
+      const shown = visible();
+      const next = shown[shown.indexOf(current) + by];
+      if (next === undefined) return;
+      current = next;
+      select(next);
+      updateViewer();
+    };
+
+    // Grid: click selects, double-click (or a tap on a touch screen) opens
+    let lastPointer = "mouse";
+    tiles.forEach((tile, i) => {
+      tile.addEventListener("pointerdown", (event) => (lastPointer = event.pointerType));
+      tile.addEventListener("click", () => (lastPointer === "touch" ? openPhoto(i) : select(i)));
+      tile.addEventListener("dblclick", () => openPhoto(i));
+      tile.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPhoto(i);
+        }
+      });
+    });
+
+    // Clicking the grid's empty space clears the selection
+    grid.addEventListener("click", (event) => {
+      if (event.target === grid) select(-1);
+    });
+
+    // Arrow keys move the selection through the grid
+    grid.addEventListener("keydown", (event) => {
+      const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
+      const shown = visible();
+      if (!shown.length || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+      event.preventDefault();
+      // Columns = tiles sharing the first row's top edge
+      const firstTop = tiles[shown[0]].offsetTop;
+      const columns = shown.filter((i) => tiles[i].offsetTop === firstTop).length || 1;
+      const by = moves[event.key] ?? (event.key === "ArrowUp" ? -columns : columns);
+      const from = Math.max(0, shown.indexOf(selected));
+      const to = shown[Math.min(shown.length - 1, Math.max(0, from + by))];
+      select(to, true);
+    });
+
+    // Photo view
+    back.addEventListener("click", closePhoto);
+    steps.forEach((button) => button.addEventListener("click", () => step(Number(button.dataset.photosStep))));
+    heart.addEventListener("click", () => {
+      if (favourites.has(current)) favourites.delete(current);
+      else favourites.add(current);
+      saveFavourites();
+      tiles[current].classList.toggle("is-favourite", favourites.has(current));
+      favCount.textContent = String(favourites.size);
+      updateViewer();
+    });
+
+    root.addEventListener("keydown", (event) => {
+      if (root.dataset.mode !== "photo") return;
+      if (event.key === "ArrowLeft") step(-1);
+      else if (event.key === "ArrowRight") step(1);
+      else if (event.key === "Escape") {
+        // Back to the grid first; a second Escape closes the window as usual
+        event.stopPropagation();
+        closePhoto();
+      } else return;
+      event.preventDefault();
+    });
+
+    // Sidebar: Library / Favourites
+    places.forEach((place) =>
+      place.addEventListener("click", () => {
+        view = place.dataset.place as typeof view;
+        places.forEach((p) => {
+          p.classList.toggle("is-active", p === place);
+          p.setAttribute("aria-pressed", String(p === place));
+        });
+        if (root.dataset.mode === "photo") closePhoto();
+        render();
+      }),
+    );
+
+    // Zoom slider: thumbnail size
+    const applyZoom = () => root.style.setProperty("--tile", `${ZOOM_TILES[Number(zoom.value)]}px`);
+    zoom.addEventListener("input", applyZoom);
+    applyZoom();
+
+    // Keep the photos to looking, not saving
+    root.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    /** Show one photo in the Library's photo view (from Finder or Spotlight) */
+    const showPhoto = (index: number) => {
+      if (!tiles[index]) return;
+      if (view !== "library") places.find((p) => p.dataset.place === "library")?.click();
+      openPhoto(index);
+    };
+
+    // Anything outside the app marked [data-photo-index] (Finder's Photos tag, Spotlight results)
+    // opens that photo; the window itself opens through its [data-open-window="photos"]
+    document.addEventListener("click", (event) => {
+      const trigger = (event.target as HTMLElement).closest<HTMLElement>("[data-photo-index]");
+      if (!trigger || root.contains(trigger)) return;
+      // After the window manager has opened the window
+      requestAnimationFrame(() => showPhoto(Number(trigger.dataset.photoIndex)));
+    });
+
+    // Closing the window puts Photos back on the Library grid
+    document.addEventListener("windows:change", (event) => {
+      if (!(event as CustomEvent).detail.open.includes("photos")) closePhoto();
+    });
+
+    render();
+  }
+</script>

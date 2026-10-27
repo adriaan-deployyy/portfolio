@@ -1,0 +1,561 @@
+---
+/*
+ * Finder: a searchable directory of every client project, opened from the Dock.
+ * Sidebar: "Client Projects" plus a tag for each scope (Branding, Web & Experimental, ...),
+ * then "CV" and "Photos" tags holding the CV and the Photos app's pictures.
+ * Toolbar: icon / list view and a search field that matches names, roles, scope, timeline and intro.
+ * Clicking a project opens its window, like the desktop folders.
+ */
+import { Image } from "astro:assets";
+import { projects } from "../data/projects";
+import { cv } from "../data/cv";
+import { photos } from "../data/photos";
+
+// macOS Finder tag colours, assigned in order
+const TAG_COLOURS = ["#ff453a", "#ff9f0a", "#ffd60a", "#32d74b", "#0a84ff", "#bf5af2", "#8e8e93"];
+
+// Finder groups related scopes under one tag; case studies still show each project's own wording
+const TAG_GROUPS: Record<string, string> = {
+  Branding: "Brand Identity",
+  "Brand Enhancing": "Brand Identity",
+};
+const tagsFor = (p: (typeof projects)[number]) => [...new Set(p.scope.map((s) => TAG_GROUPS[s] ?? s))];
+const tags = [...new Set(projects.flatMap(tagsFor))];
+
+const haystack = (p: (typeof projects)[number]) =>
+  [p.name, p.role, p.timeline, p.website.label, ...p.scope, p.intro].join(" ").toLowerCase();
+
+// The CV lives only under its own "CV" tag, never among the client projects
+const CV_TAG = "CV";
+const cvHaystack = [cv.name, cv.title, "resume", cv.summary].join(" ").toLowerCase();
+
+// Likewise the photos (the same ones as the Photos app), under a "Photos" tag
+const PHOTOS_TAG = "Photos";
+---
+
+<div class="finder" data-finder>
+  <aside class="finder__sidebar" aria-label="Locations">
+    <p class="finder__group">Favourites</p>
+    <button class="finder__place is-active" type="button" data-tag="" aria-pressed="true">
+      <svg class="finder__place-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M1.5 4.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.5h5.5a1.5 1.5 0 0 1 1.5 1.5v5.5a1.5 1.5 0 0 1-1.5 1.5H3a1.5 1.5 0 0 1-1.5-1.5Z" />
+      </svg>
+      Client Projects
+    </button>
+    <p class="finder__group">Tags</p>
+    {
+      tags.map((tag, i) => (
+        <button class="finder__place" type="button" data-tag={tag} aria-pressed="false">
+          <span class="finder__dot" style={{ background: TAG_COLOURS[i % TAG_COLOURS.length] }} />
+          {tag}
+        </button>
+      ))
+    }
+    <button class="finder__place" type="button" data-tag={CV_TAG} aria-pressed="false">
+      <span class="finder__dot" style={{ background: TAG_COLOURS[tags.length % TAG_COLOURS.length] }} />
+      {CV_TAG}
+    </button>
+    <button class="finder__place" type="button" data-tag={PHOTOS_TAG} aria-pressed="false">
+      <span class="finder__dot" style={{ background: TAG_COLOURS[(tags.length + 1) % TAG_COLOURS.length] }} />
+      {PHOTOS_TAG}
+    </button>
+  </aside>
+
+  <section class="finder__main">
+    <div class="finder__toolbar">
+      <h3 class="finder__heading" data-finder-heading>Client Projects</h3>
+      <div class="finder__views" role="group" aria-label="View as">
+        <button class="finder__view is-active" type="button" data-view="icons" aria-pressed="true" aria-label="Icons">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect x="2" y="2" width="5" height="5" rx="1" /><rect x="9" y="2" width="5" height="5" rx="1" />
+            <rect x="2" y="9" width="5" height="5" rx="1" /><rect x="9" y="9" width="5" height="5" rx="1" />
+          </svg>
+        </button>
+        <button class="finder__view" type="button" data-view="list" aria-pressed="false" aria-label="List">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <rect x="2" y="3" width="12" height="2" rx="1" /><rect x="2" y="7" width="12" height="2" rx="1" />
+            <rect x="2" y="11" width="12" height="2" rx="1" />
+          </svg>
+        </button>
+      </div>
+      <label class="finder__search">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="6.75" cy="6.75" r="4.75" fill="none" stroke="currentColor" stroke-width="1.6" />
+          <path d="m10.3 10.3 3.7 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <input type="search" placeholder="Search" aria-label="Search projects" autocomplete="off" data-finder-search />
+      </label>
+    </div>
+
+    <div class="finder__body">
+      <div class="finder__columns" aria-hidden="true">
+        <span>Name</span><span>Role</span><span>Timeline</span>
+      </div>
+      <ul class="finder__items" data-finder-items data-view="icons">
+        {
+          projects.map((project) => (
+            <li data-finder-item data-kind="project" data-search={haystack(project)} data-tags={tagsFor(project).join("|")}>
+              <button class="finder__item" type="button" data-open-window={project.id}>
+                <Image class="finder__icon" src={project.icon} alt="" width={64} height={64} densities={[1, 2]} draggable="false" />
+                <span class="finder__name">{project.name}</span>
+                <span class="finder__meta">{project.role}</span>
+                <span class="finder__meta">{project.timeline}</span>
+              </button>
+            </li>
+          ))
+        }
+        <li data-finder-item data-search={cvHaystack} data-tags={CV_TAG} hidden>
+          <button class="finder__item finder__item--file" type="button" data-open-window={cv.id}>
+            <Image class="finder__icon" src={cv.icon} alt="" width={64} height={64} densities={[1, 2]} draggable="false" />
+            <span class="finder__name">{cv.name}</span>
+            <span class="finder__meta">Designer</span>
+            <span class="finder__meta">PDF</span>
+          </button>
+        </li>
+        {
+          photos.map((photo, i) => (
+            <li data-finder-item data-search={`${photo.name} ${photo.alt} photo picture image jpeg`.toLowerCase()} data-tags={PHOTOS_TAG} hidden>
+              <button class="finder__item finder__item--photo" type="button" data-open-window="photos" data-photo-index={i} aria-label={`${photo.name}: ${photo.alt}`}>
+                <Image class="finder__icon finder__icon--photo" src={photo.image} alt="" width={64} height={64} densities={[1, 2]} fit="cover" loading="lazy" draggable="false" />
+                <span class="finder__name">{photo.name}</span>
+                <span class="finder__meta">Photo</span>
+                <span class="finder__meta">JPEG</span>
+              </button>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="finder__empty" data-finder-empty hidden>
+        No results for “<span data-finder-query></span>”
+      </p>
+    </div>
+
+    <footer class="finder__status" data-finder-status aria-live="polite">{projects.length} items</footer>
+  </section>
+</div>
+
+<style>
+  .finder {
+    --finder-hover: color-mix(in srgb, var(--label-primary) 7%, transparent);
+    --finder-selected: color-mix(in srgb, var(--label-primary) 11%, transparent);
+    --finder-rule: color-mix(in srgb, var(--label-primary) 10%, transparent);
+    --finder-muted: color-mix(in srgb, var(--label-primary) 55%, transparent);
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    height: 100%;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    color: var(--label-primary);
+  }
+
+  /* Sidebar */
+  .finder__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 10px 8px;
+    background: color-mix(in srgb, var(--label-primary) 4%, transparent);
+    border-right: 1px solid var(--finder-rule);
+    overflow-y: auto;
+  }
+
+  .finder__group {
+    margin: 10px 8px 4px;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    font-weight: var(--weight-emphasized);
+    color: var(--finder-muted);
+  }
+
+  .finder__group:first-child {
+    margin-top: 2px;
+  }
+
+  .finder__place {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 6px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .finder__place:hover {
+    background: var(--finder-hover);
+  }
+
+  .finder__place.is-active {
+    background: var(--finder-selected);
+    font-weight: var(--weight-emphasized);
+  }
+
+  .finder__place-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--accent-indigo);
+    stroke-width: 1.4;
+  }
+
+  .finder__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Main column */
+  .finder__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .finder__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--finder-rule);
+  }
+
+  .finder__heading {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--text-body);
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .finder__views {
+    display: flex;
+    padding: 2px;
+    border-radius: 7px;
+    background: var(--finder-hover);
+  }
+
+  .finder__view {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 22px;
+    border-radius: 5px;
+    color: var(--finder-muted);
+  }
+
+  .finder__view svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+  }
+
+  .finder__view.is-active {
+    background: var(--window-background);
+    color: var(--label-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .finder__search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 180px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 7px;
+    background: var(--finder-hover);
+    color: var(--finder-muted);
+  }
+
+  .finder__search:focus-within {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: 1px;
+  }
+
+  .finder__search svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+
+  .finder__search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--label-primary);
+    outline: none;
+  }
+
+  .finder__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Icon view */
+  .finder__items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 6px 10px;
+    margin: 0;
+    padding: 16px;
+    list-style: none;
+  }
+
+  .finder__items [hidden] {
+    display: none;
+  }
+
+  .finder__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 8px 4px;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .finder__item:hover {
+    background: var(--finder-hover);
+  }
+
+  .finder__icon {
+    width: 64px;
+    height: 64px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    user-select: none;
+  }
+
+  .finder__name {
+    font-weight: var(--weight-emphasized);
+  }
+
+  .finder__meta {
+    display: none;
+  }
+
+  .finder__columns {
+    display: none;
+  }
+
+  /* List view: Name · Role · Timeline */
+  .finder__items[data-view="list"] {
+    display: block;
+    padding: 0 8px 8px;
+  }
+
+  .finder__items[data-view="list"] .finder__item,
+  .finder__body:has([data-view="list"]) .finder__columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) minmax(0, 0.7fr);
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .finder__items[data-view="list"] .finder__item {
+    padding: 5px 8px;
+    border-radius: 6px;
+  }
+
+  .finder__items[data-view="list"] li:nth-child(even of :not([hidden])) .finder__item {
+    background: color-mix(in srgb, var(--label-primary) 3%, transparent);
+  }
+
+  .finder__items[data-view="list"] .finder__item:hover {
+    background: var(--finder-hover);
+  }
+
+  .finder__items[data-view="list"] .finder__icon {
+    display: none;
+  }
+
+  .finder__items[data-view="list"] .finder__name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: var(--weight-regular);
+  }
+
+  .finder__items[data-view="list"] .finder__name::before {
+    content: "";
+    width: 16px;
+    height: 13px;
+    flex-shrink: 0;
+    border-radius: 2px 2px 3px 3px;
+    background: linear-gradient(#7cc4ff, #3b9cf4);
+  }
+
+  /* Files get a page instead of a folder */
+  .finder__items[data-view="list"] .finder__item--file .finder__name::before {
+    width: 11px;
+    height: 14px;
+    margin-inline: 2px 3px;
+    border-radius: 1px 4px 1px 1px;
+    background: linear-gradient(#ffffff, #e4e4e6);
+    box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Photos: the picture itself as the icon, with a thin white frame like Finder's thumbnails */
+  .finder__icon--photo {
+    object-fit: cover;
+    border: 2px solid #ffffff;
+    border-radius: 3px;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+
+  .finder__items[data-view="list"] .finder__item--photo .finder__name::before {
+    height: 12px;
+    border-radius: 2px;
+    background: linear-gradient(#7cc4ff 0 55%, #34c759 55%);
+  }
+
+  .finder__items[data-view="list"] .finder__meta {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--finder-muted);
+  }
+
+  .finder__body:has([data-view="list"]) .finder__columns {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 6px 16px;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    font-weight: var(--weight-emphasized);
+    color: var(--finder-muted);
+    background: var(--window-background);
+    border-bottom: 1px solid var(--finder-rule);
+  }
+
+  .finder__empty {
+    margin: 48px 16px;
+    text-align: center;
+    color: var(--finder-muted);
+  }
+
+  .finder__empty[hidden] {
+    display: none;
+  }
+
+  .finder__status {
+    padding: 5px 14px;
+    border-top: 1px solid var(--finder-rule);
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    text-align: center;
+    color: var(--finder-muted);
+  }
+
+  /* Narrow windows: drop the sidebar, let the search shrink */
+  @container window (max-width: 520px) {
+    .finder {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .finder__sidebar {
+      display: none;
+    }
+    .finder__search {
+      width: 130px;
+    }
+  }
+</style>
+
+<script>
+  const finder = document.querySelector<HTMLElement>("[data-finder]");
+
+  if (finder) {
+    const search = finder.querySelector<HTMLInputElement>("[data-finder-search]")!;
+    const list = finder.querySelector<HTMLElement>("[data-finder-items]")!;
+    const items = [...finder.querySelectorAll<HTMLElement>("[data-finder-item]")];
+    const places = [...finder.querySelectorAll<HTMLButtonElement>(".finder__place")];
+    const views = [...finder.querySelectorAll<HTMLButtonElement>(".finder__view")];
+    const heading = finder.querySelector<HTMLElement>("[data-finder-heading]")!;
+    const empty = finder.querySelector<HTMLElement>("[data-finder-empty]")!;
+    const query = finder.querySelector<HTMLElement>("[data-finder-query]")!;
+    const status = finder.querySelector<HTMLElement>("[data-finder-status]")!;
+
+    let tag = "";
+
+    /** Every search word must appear somewhere in the project (name, role, scope, timeline, intro) */
+    const update = () => {
+      const text = search.value.trim();
+      const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = 0;
+      for (const item of items) {
+        const itemTags = item.dataset.tags!.split("|");
+        // "Client Projects" lists only the projects; the CV and photos show under their own tags
+        const inTag = tag ? itemTags.includes(tag) : item.dataset.kind === "project";
+        const matches = words.every((word) => item.dataset.search!.includes(word));
+        item.hidden = !(inTag && matches);
+        if (!item.hidden) shown++;
+      }
+      const place = tag || "Client Projects";
+      heading.textContent = text ? `Searching “${text}”${tag ? ` in ${tag}` : ""}` : place;
+      empty.hidden = shown > 0;
+      query.textContent = text;
+      status.textContent = `${shown} ${shown === 1 ? "item" : "items"}`;
+    };
+
+    search.addEventListener("input", update);
+
+    search.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        // Open the first match, like pressing Return on Spotlight's top hit
+        items.find((item) => !item.hidden)?.querySelector("button")?.click();
+      }
+      if (event.key === "Escape" && search.value) {
+        // Clear the search first; a second Escape closes the window as usual
+        event.stopPropagation();
+        search.value = "";
+        update();
+      }
+    });
+
+    for (const place of places) {
+      place.addEventListener("click", () => {
+        tag = place.dataset.tag ?? "";
+        for (const p of places) {
+          p.classList.toggle("is-active", p === place);
+          p.setAttribute("aria-pressed", String(p === place));
+        }
+        update();
+      });
+    }
+
+    for (const view of views) {
+      view.addEventListener("click", () => {
+        list.dataset.view = view.dataset.view;
+        for (const v of views) {
+          v.classList.toggle("is-active", v === view);
+          v.setAttribute("aria-pressed", String(v === view));
+        }
+      });
+    }
+
+    // Put the cursor in the search field whenever Finder opens
+    let wasOpen = false;
+    document.addEventListener("windows:change", (event) => {
+      const isOpen = (event as CustomEvent).detail.open.includes("finder");
+      if (isOpen && !wasOpen) requestAnimationFrame(() => search.focus({ preventScroll: true }));
+      wasOpen = isOpen;
+    });
+  }
+</script>

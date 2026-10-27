@@ -1,0 +1,161 @@
+/*
+ * Design tokens from the Figma file "macOS 27 (Adriaan Website use case)".
+ * Names mirror the Figma variables so the two stay easy to cross-reference.
+ */
+
+/* Switzer (Fontshare, ITF Free Font License), variable 100–900. Only downloaded where it's used. */
+@font-face {
+  font-family: "Switzer";
+  src: url("/fonts/Switzer-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Typography: SF Pro on Apple devices, the closest system face elsewhere */
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  --font-body: "Geist", var(--font-system);
+
+  /* Body/Emphasized 13/16 590 · Body/Regular 13/16 400 · Subheadline 11/14 · Title 3 15/20 · Title 1 22/26 */
+  --text-body: 13px;
+  --leading-body: 16px;
+  --weight-regular: 400;
+  --weight-emphasized: 590;
+  --weight-heavy: 860;
+  --text-subheadline: 11px;
+  --leading-subheadline: 14px;
+  --text-title-3: 15px;
+  --leading-title-3: 20px;
+  --text-title-1: 22px;
+  --leading-title-1: 26px;
+
+  /* Spacing & radius (sds-size-*) */
+  --space-200: 8px;
+  --space-400: 16px;
+  --space-20: 20px;
+  --space-800: 32px;
+  --space-1600: 64px;
+  --radius-200: 8px;
+
+  /* Cursor (Figma: Cursor Design → Pointers, 28 x 28). Hotspot is the arrow tip. */
+  --cursor: url("/cursors/pointer.svg") 13 12, default;
+
+  /* Accents & grays */
+  --accent-orange: #ff8d28;
+  --accent-indigo: #6155f5;
+  --gray: #8e8e93;
+  --gray-black: #000000;
+  --gray-white: #ffffff;
+
+  /* Menu bar */
+  --menubar-height: 34px;
+  --menubar-text: var(--gray-white);
+  --menubar-item-hover: rgba(255, 255, 255, 0.2);
+
+  /* Dock */
+  --dock-radius: 15px;
+  --dock-icon: 36px;
+  --dock-gap: 12px;
+
+  /* Effect styles: "White BG" and "Black BG" app-icon materials */
+  --effect-white-bg: inset 0 1px 0.8px 0 #ffffff, inset 0 -3px 5px 0 rgba(0, 0, 0, 0.15);
+  --effect-white-bg-drop: drop-shadow(0 1px 0.5px rgba(0, 0, 0, 0.1));
+  --effect-black-bg: inset 0 0.25px 2px 0 rgba(255, 255, 255, 0.25), inset 0 -12px 12px 0 rgba(0, 0, 0, 0.75);
+  --effect-black-bg-drop: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+  --tile-black-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%), #161616;
+}
+
+/* Windows has no SF Pro; use Switzer there instead of Segoe UI (set by the script in Base.astro) */
+:root[data-os="windows"] {
+  --font-system: "Switzer", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Light mode (default) */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --window-background: #ffffff;
+  --label-primary: rgba(0, 0, 0, 0.85);
+  --scrollbar: rgba(0, 0, 0, 0.5);
+  --dock-fill-luminosity: rgba(77, 77, 77, 0.3);
+  --dock-separator: rgba(255, 255, 255, 0.12); /* Figma: Dock - Light Mode → Separator */
+
+  /* Window (Figma: Windows - Composed, Light) */
+  --window-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.8), 0 18px 54px 0 rgba(0, 0, 0, 0.3);
+  --window-border: 0;
+  --titlebar-fill: rgba(255, 255, 255, 0.85);
+  --titlebar-edge: rgba(0, 0, 0, 0.05);
+  --control-inactive: #dcdcdc;
+
+  /* Case study content (Figma: Client Projects) */
+  --content-text: var(--gray-black);
+  --content-tertiary: #bfbfbf; /* Labels - Vibrant/Tertiary */
+  --content-rule: #e6e6e6; /* Labels - Vibrant/Quinary */
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --window-background: #1e1e1e;
+  --label-primary: rgba(255, 255, 255, 0.85);
+  --scrollbar: rgba(255, 255, 255, 0.55);
+  --dock-fill-luminosity: rgba(69, 69, 69, 0.5);
+  --dock-separator: #404040; /* Figma: Dock - Dark Mode → Separator */
+
+  /* Window (Figma: Windows - Composed, Dark) */
+  --window-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.8), 0 18px 54px 0 rgba(0, 0, 0, 0.57);
+  --window-border: 1px solid rgba(255, 255, 255, 0.2);
+  --titlebar-fill: rgba(31, 31, 31, 0.55);
+  --titlebar-edge: rgba(255, 255, 255, 0.1);
+  --control-inactive: #4a4a4a;
+
+  /* The case studies are only designed in light; these keep them readable in a dark window */
+  --content-text: var(--gray-white);
+  --content-tertiary: rgba(255, 255, 255, 0.4);
+  --content-rule: rgba(255, 255, 255, 0.1);
+}
+
+/* Show the matching variant of anything that differs per theme */
+:root[data-theme="dark"] .only-light,
+:root:not([data-theme="dark"]) .only-dark {
+  display: none !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: var(--font-system);
+  -webkit-font-smoothing: antialiased;
+  cursor: var(--cursor);
+}
+
+/* One cursor everywhere, like macOS: links and buttons keep the arrow too */
+a,
+button,
+[role="button"],
+[data-open-window] {
+  cursor: var(--cursor);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-indigo);
+  outline-offset: 2px;
+}

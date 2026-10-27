@@ -1,0 +1,95 @@
+﻿---
+/*
+ * Desktop wallpaper: a looping video for each theme (Adriaan at his desk, by day and by night).
+ * The originals (1080p HEVC, 6–8s) were re-encoded for the web: VP9 WebM first, H.264 MP4 for
+ * Safari and anything else, no audio. Each video's first frame is its poster, shown straight away
+ * and kept on screen when the video can't or shouldn't play (reduced motion, iOS Low Power Mode).
+ * Only the current theme's video downloads and plays; switching themes swaps them over.
+ */
+import { getImage } from "astro:assets";
+import lightPoster from "../assets/wallpaper-light-poster.jpg";
+import darkPoster from "../assets/wallpaper-dark-poster.jpg";
+
+const posters = {
+  light: await getImage({ src: lightPoster, width: 1920, format: "webp" }),
+  dark: await getImage({ src: darkPoster, width: 1920, format: "webp" }),
+};
+const themes = ["light", "dark"] as const;
+---
+
+<div class="wallpaper" aria-hidden="true">
+  {
+    themes.map((theme) => (
+      <video
+        class={`layer layer--${theme}`}
+        data-wallpaper={theme}
+        poster={posters[theme].src}
+        muted
+        loop
+        playsinline
+        disablepictureinpicture
+        disableremoteplayback
+        preload="none"
+      >
+        <source src={`/wallpaper/${theme}.webm`} type="video/webm" />
+        <source src={`/wallpaper/${theme}.mp4`} type="video/mp4" />
+      </video>
+    ))
+  }
+</div>
+
+<style>
+  .wallpaper {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* Figma: Desktop Wallpaper, layer blur 2px, cover */
+  .layer {
+    position: absolute;
+    inset: -4px; /* bleed so the blur doesn't soften the screen edges */
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    object-fit: cover;
+    filter: blur(2px);
+    transition: opacity 600ms ease;
+    pointer-events: none;
+  }
+
+  .layer--dark {
+    opacity: 0;
+  }
+
+  :global(:root[data-theme="dark"]) .layer--dark {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  /*
+   * Play the current theme's video and pause the other one (it only starts downloading the first
+   * time its theme is shown). With reduced motion on, the posters stay as still wallpapers.
+   */
+  const videos = [...document.querySelectorAll<HTMLVideoElement>("[data-wallpaper]")];
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+  const sync = () => {
+    const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+    for (const video of videos) {
+      const active = video.dataset.wallpaper === theme;
+      if (active && !reduceMotion.matches) {
+        if (video.preload !== "auto") video.preload = "auto";
+        // Autoplay can still be refused (e.g. Low Power Mode); the poster stays up then
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    }
+  };
+
+  sync();
+  new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  reduceMotion.addEventListener("change", sync);
+</script>

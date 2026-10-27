@@ -1,0 +1,54 @@
+---
+/*
+ * The CV window, like Preview: the page sits on a grey canvas and scales with the window.
+ * Light mode shows the light CV, dark mode the dark one; both images load only when the
+ * window opens (lazy, and the other theme's copy is display: none).
+ */
+import { Image } from "astro:assets";
+import { cv } from "../data/cv";
+
+const widths = [600, 900, 1200, 1785];
+const sizes = "(max-width: 720px) 100vw, 720px";
+---
+
+<div class="cv">
+  <div class="cv__page">
+    <Image class="cv__image only-light" src={cv.pages.light} alt={cv.summary} widths={widths} sizes={sizes} loading="lazy" draggable="false" />
+    <Image class="cv__image only-dark" src={cv.pages.dark} alt={cv.summary} widths={widths} sizes={sizes} loading="lazy" draggable="false" />
+  </div>
+</div>
+
+<style>
+  .cv {
+    --cv-canvas: #e5e5e7;
+    min-height: 100%;
+    padding: 24px clamp(12px, 5cqi, 32px) 32px;
+    background: var(--cv-canvas);
+  }
+
+  :global(:root[data-theme="dark"]) .cv {
+    --cv-canvas: #141414;
+  }
+
+  /* Figma frame: 595 x 1523 */
+  .cv__page {
+    max-width: 720px;
+    margin: 0 auto;
+    aspect-ratio: 1785 / 4569;
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 0.5px rgba(0, 0, 0, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 12px 32px rgba(0, 0, 0, 0.12);
+  }
+
+  .cv__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+  }
+</style>

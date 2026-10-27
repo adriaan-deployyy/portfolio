@@ -1,0 +1,55 @@
+---
+/* "Download PDF" in the CV window's title bar: the light PDF in light mode, the dark one in dark mode */
+import { cv } from "../data/cv";
+
+const themes = ["light", "dark"] as const;
+---
+
+{
+  themes.map((theme) => (
+    <a class:list={["cv-download", `only-${theme}`]} href={cv.pdf[theme]} download={cv.filename} aria-label={`Download CV as PDF (${theme} version)`}>
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 2.5v7.5M4.75 7 8 10.25 11.25 7M3 13h10" />
+      </svg>
+      Download PDF
+    </a>
+  ))
+}
+
+<style>
+  .cv-download {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 9px 0 7px;
+    border-radius: 6px;
+    font-size: var(--text-subheadline);
+    line-height: 1;
+    font-weight: var(--weight-emphasized);
+    color: #fff;
+    background: var(--accent-indigo);
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .cv-download:hover {
+    background: color-mix(in srgb, var(--accent-indigo) 88%, #000);
+  }
+
+  .cv-download:focus-visible {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: 2px;
+  }
+
+  .cv-download svg {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

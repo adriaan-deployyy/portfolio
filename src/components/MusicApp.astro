@@ -1,0 +1,1294 @@
+---
+/*
+ * YouTube Music, opened from the Dock. Figma: "YT Music Design" → "YT Music Desktop Version"
+ * (6485:43047, 1062 x 839): nav bar, side nav, the player with its "Up next" queue, and the
+ * playback bar along the bottom.
+ *
+ * One song plays. The big artwork area holds YouTube's own embedded player (loaded the first
+ * time the window opens), and the design's playback bar drives it: play / pause, restart,
+ * seek along the red progress line. Everything else is there to look the part.
+ */
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
+import { Image } from "astro:assets";
+import { nowPlaying, queue, chips, tabs } from "../data/music";
+import hero from "../assets/ytm/hero.jpg";
+import avatar from "../assets/ytm/avatar.jpg";
+
+const I = "/ytm";
+const sideNav = [
+  { label: "Home", icon: `${I}/home.svg`, active: true },
+  { label: "Explore", icon: `${I}/explore.svg` },
+  { label: "Library", icon: `${I}/library.svg` },
+];
+---
+
+<div class="ytm" data-ytm data-video={nowPlaying.youtubeId || undefined} data-state="paused">
+  <!-- Figma: Nav (64px) -->
+  <header class="ytm__nav">
+    <div class="ytm__brand">
+      <span class="ytm__guide" aria-hidden="true"><img src={`${I}/menu.svg`} alt="" draggable="false" /></span>
+      <img class="ytm__logo" src={`${I}/logo.svg`} alt="YouTube Music" draggable="false" />
+    </div>
+    <div class="ytm__search" aria-hidden="true">
+      <img src={`${I}/search.svg`} alt="" draggable="false" />
+      <span>Search songs, albums, artists, podcasts</span>
+    </div>
+    <div class="ytm__nav-end" aria-hidden="true">
+      <img class="ytm__cast" src={`${I}/cast.svg`} alt="" draggable="false" />
+      <Image class="ytm__avatar" src={avatar} alt="" width={26} height={26} densities={[1, 2, 3]} draggable="false" />
+    </div>
+  </header>
+
+  <div class="ytm__middle">
+    <!-- Figma: Side Nav (150px) -->
+    <nav class="ytm__side" aria-hidden="true">
+      {
+        sideNav.map((entry) => (
+          <span class:list={["ytm__side-entry", { "is-active": entry.active }]} title={entry.label}>
+            <img src={entry.icon} alt="" draggable="false" />
+          </span>
+        ))
+      }
+      <span class="ytm__side-rule"></span>
+    </nav>
+
+    <!-- Figma: View -->
+    <div class="ytm__view">
+      <div class="ytm__column">
+        <!-- Figma: YtmusicPlayer. YouTube's player goes in here; the artwork covers it until the song starts -->
+        <div class="ytm__stage">
+          <div class="ytm__player"><div data-ytm-player></div></div>
+          <Image class="ytm__poster" src={hero} alt="" widths={[766, 1532]} sizes="(max-width: 800px) 100vw, 766px" draggable="false" />
+          <!-- Click anywhere on the video to play or pause; the icon shows what a click will do -->
+          <button class="ytm__overlay" type="button" data-ytm-toggle aria-label={`Play ${nowPlaying.title}`}>
+            <span class="ytm__overlay-btn" aria-hidden="true">
+              <img class="ytm__icon-play" src={`${I}/play.svg`} alt="" />
+              <img class="ytm__icon-pause" src={`${I}/pause.svg`} alt="" />
+              <span class="ytm__dots"><span></span><span></span><span></span></span>
+            </span>
+          </button>
+          <p class="ytm__notice" data-ytm-notice hidden>
+            This song can't play here.
+            <a href={`https://www.youtube.com/watch?v=${nowPlaying.youtubeId}`} target="_blank" rel="noopener">Watch on YouTube</a>
+          </p>
+        </div>
+
+        <!-- Figma: Top of SideBar (tabs) -->
+        <div class="ytm__tabs" aria-hidden="true">
+          {tabs.map((tab, i) => <span class:list={["ytm__tab", { "is-active": i === 0, "is-disabled": tab === "Lyrics" }]}>{tab}</span>)}
+        </div>
+
+        <!-- Figma: YtmusicQueueHeaderRenderer -->
+        <div class="ytm__queue-head">
+          <div class="ytm__queue-from">
+            <span class="ytm__muted-sm">Playing from</span>
+            <span class="ytm__strong ytm__clip">{nowPlaying.playingFrom}</span>
+          </div>
+          <span class="ytm__save" aria-hidden="true"><img src={`${I}/save.svg`} alt="" draggable="false" />Save</span>
+        </div>
+
+        <!-- Figma: SelectBar (chips) -->
+        <div class="ytm__chips" aria-hidden="true">
+          {chips.map((chip, i) => <span class:list={["ytm__chip", { "is-active": i === 0 }]}>{chip}</span>)}
+        </div>
+
+        <!-- Figma: YtmusicPlayerQueue -->
+        <ol class="ytm__queue" aria-label="Up next">
+          {
+            queue.map((item, i) => {
+              const row = (
+                <>
+                  <span class="ytm__thumb">
+                    <Image src={item.thumbnail} alt="" width={32} densities={[1, 2, 3]} draggable="false" />
+                    {i === 0 && (
+                      <span class="ytm__thumb-state" aria-hidden="true">
+                        <img class="ytm__icon-speaker" src={`${I}/speaker.svg`} alt="" />
+                        <img class="ytm__icon-play" src={`${I}/play.svg`} alt="" />
+                      </span>
+                    )}
+                  </span>
+                  <span class="ytm__queue-text">
+                    <span class="ytm__strong ytm__clip">{item.title}</span>
+                    <span class="ytm__muted ytm__clip">{item.artist}</span>
+                  </span>
+                  <span class="ytm__muted ytm__duration">{item.duration}</span>
+                </>
+              );
+              return (
+                <li class:list={["ytm__queue-item", { "is-current": i === 0 }]}>
+                  {i === 0 ? (
+                    <button class="ytm__queue-row" type="button" data-ytm-toggle aria-label={`Play or pause ${item.title}`}>
+                      {row}
+                    </button>
+                  ) : (
+                    <div class="ytm__queue-row">{row}</div>
+                  )}
+                </li>
+              );
+            })
+          }
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Figma: Footer (75px) with the red progress line along its top -->
+  <footer class="ytm__bar">
+    <div
+      class="ytm__progress"
+      role="slider"
+      tabindex="0"
+      aria-label="Seek"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      aria-valuetext="0:00"
+      data-ytm-progress>
+      <span class="ytm__progress-track"><span class="ytm__progress-fill"></span></span>
+      <span class="ytm__progress-knob"></span>
+    </div>
+
+    <div class="ytm__controls">
+      <button class="ytm__btn ytm__btn--skip" type="button" data-ytm-restart aria-label="Previous (restart song)">
+        <img src={`${I}/previous.svg`} alt="" />
+      </button>
+      <button class="ytm__btn ytm__btn--play" type="button" data-ytm-toggle aria-label="Play">
+        <img class="ytm__icon-play" src={`${I}/play.svg`} alt="" />
+        <img class="ytm__icon-pause" src={`${I}/pause.svg`} alt="" />
+      </button>
+      <button class="ytm__btn ytm__btn--skip" type="button" disabled aria-label="Next (nothing else queued)">
+        <img src={`${I}/next.svg`} alt="" />
+      </button>
+      <span class="ytm__time" data-ytm-time aria-hidden="true">0:00 / {nowPlaying.duration}</span>
+    </div>
+
+    <div class="ytm__track">
+      <div class="ytm__track-text">
+        <span class="ytm__strong ytm__clip">{nowPlaying.title}</span>
+        <span class="ytm__dim ytm__clip">{nowPlaying.artist} • {nowPlaying.views} • {nowPlaying.likes}</span>
+      </div>
+      <div class="ytm__track-actions">
+        <button class="ytm__btn ytm__btn--round" type="button" aria-pressed="false" aria-label="Like" data-ytm-rate="like">
+          <img src={`${I}/like.svg`} alt="" />
+        </button>
+        <button class="ytm__btn ytm__btn--round" type="button" aria-pressed="false" aria-label="Dislike" data-ytm-rate="dislike">
+          <img src={`${I}/dislike.svg`} alt="" />
+        </button>
+        <span class="ytm__btn ytm__btn--round ytm__btn--more" aria-hidden="true"><img src={`${I}/more.svg`} alt="" /></span>
+      </div>
+    </div>
+
+    <div class="ytm__end" aria-hidden="true">
+      <img class="ytm__end-left" src={`${I}/triangle.svg`} alt="" />
+      <img src={`${I}/collapse.svg`} alt="" />
+    </div>
+  </footer>
+</div>
+
+<style>
+  .ytm {
+    --ytm-rule: rgba(255, 255, 255, 0.1);
+    --ytm-side-rule: rgba(142, 142, 147, 0.44);
+    display: grid;
+    grid-template-rows: 64px minmax(0, 1fr) 75px;
+    grid-template-columns: minmax(0, 1fr); /* long titles truncate instead of widening the app */
+    height: 100%;
+    background: #000000;
+    color: #ffffff;
+    font-family: "Roboto", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 19.2px;
+    user-select: none;
+  }
+
+  .ytm img {
+    display: block;
+    max-width: none;
+    -webkit-user-drag: none;
+  }
+
+  .ytm button {
+    font: inherit;
+    color: inherit;
+  }
+
+  .ytm__strong {
+    font-weight: 500;
+    color: #ffffff;
+  }
+
+  .ytm__muted {
+    color: #aaaaaa;
+  }
+
+  .ytm__dim {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .ytm__muted-sm {
+    font-size: 12px;
+    line-height: 16.8px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .ytm__clip {
+    display: block;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Nav */
+  .ytm__nav {
+    display: flex;
+    align-items: center;
+    padding-right: 38px;
+  }
+
+  .ytm__brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    width: 150px;
+    padding-left: 16px;
+  }
+
+  .ytm__guide {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+  }
+
+  .ytm__guide img {
+    width: 18px;
+    height: 14px;
+  }
+
+  .ytm__logo {
+    width: 70px;
+    height: 24px;
+  }
+
+  .ytm__search {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 480px;
+    height: 41.6px;
+    margin: 0 auto;
+    padding: 0 18px 0 17px;
+    border: 0.8px solid rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .ytm__search img {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+  }
+
+  .ytm__search span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ytm__nav-end {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .ytm__cast {
+    width: 22px;
+    height: 18px;
+    margin: 0 17px 0 9px;
+  }
+
+  .ytm__avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+  }
+
+  /* Middle: side nav + view */
+  .ytm__middle {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .ytm__side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 24px;
+    border-top: 1px solid var(--ytm-side-rule);
+    border-right: 1px solid var(--ytm-side-rule);
+  }
+
+  .ytm__side-entry {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+  }
+
+  .ytm__side-entry.is-active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .ytm__side-entry img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ytm__side-rule {
+    align-self: stretch;
+    margin-top: 24px;
+    border-top: 1px solid var(--ytm-side-rule);
+  }
+
+  .ytm__view {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  }
+
+  .ytm__column {
+    max-width: 766px;
+    margin: 0 auto;
+    padding: 1px 16px 24px;
+    box-sizing: content-box;
+  }
+
+  /* Player stage: Figma 766 x 395 */
+  .ytm__stage {
+    position: relative;
+    aspect-ratio: 766 / 395;
+    background: #000000;
+    overflow: hidden;
+  }
+
+  .ytm__player,
+  .ytm__player :global(iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  /* The song's artwork, until YouTube's player is showing the video */
+  .ytm__poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+  }
+
+  .ytm.has-started .ytm__poster {
+    opacity: 0;
+  }
+
+  /*
+   * Play / pause over the video. Paused: the play button stays up. Playing: the pause button
+   * shows while the pointer is over the video, and flashes briefly whenever the state changes.
+   */
+  .ytm__overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+
+  .ytm__overlay-btn {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition:
+      opacity 200ms ease,
+      scale 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .ytm__overlay-btn img {
+    grid-area: 1 / 1;
+  }
+
+  .ytm__overlay-btn .ytm__icon-play {
+    width: 24px;
+    height: 30px;
+    margin-left: 5px;
+  }
+
+  .ytm__overlay-btn .ytm__icon-pause {
+    width: 22px;
+    height: 28px;
+  }
+
+  .ytm__overlay:hover .ytm__overlay-btn {
+    scale: 1.08;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .ytm[data-state="playing"] .ytm__overlay-btn {
+    opacity: 0;
+  }
+
+  .ytm[data-state="playing"] .ytm__overlay:hover .ytm__overlay-btn,
+  .ytm[data-state="playing"] .ytm__overlay:focus-visible .ytm__overlay-btn,
+  .ytm.is-flashing .ytm__overlay-btn {
+    opacity: 1;
+  }
+
+  .ytm:not([data-video]) .ytm__overlay {
+    display: none;
+  }
+
+  /* Waiting for YouTube: the button pulses gently */
+  /*
+   * Waiting for YouTube (starting up or buffering): three bouncing dots replace the play / pause
+   * icon, and stay up even mid-song; the normal icon comes back once the music is playing
+   */
+  .ytm__dots {
+    display: none;
+    grid-area: 1 / 1;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ytm__dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffffff;
+    animation: ytm-bounce 1s ease-in-out infinite;
+  }
+
+  .ytm__dots span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .ytm__dots span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes ytm-bounce {
+    0%,
+    60%,
+    100% {
+      translate: 0 0;
+      opacity: 0.55;
+    }
+    30% {
+      translate: 0 -7px;
+      opacity: 1;
+    }
+  }
+
+  .ytm.is-loading .ytm__dots {
+    display: flex;
+  }
+
+  .ytm.is-loading .ytm__overlay-btn img {
+    display: none;
+  }
+
+  .ytm.is-loading .ytm__overlay-btn {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ytm__dots span {
+      animation: ytm-pulse 1.4s ease-in-out infinite;
+    }
+  }
+
+  .ytm__notice {
+    position: absolute;
+    inset: auto 16px 16px;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .ytm__notice[hidden] {
+    display: none;
+  }
+
+  .ytm__notice a {
+    color: #ffffff;
+    font-weight: 500;
+  }
+
+  /* Tabs */
+  .ytm__tabs {
+    display: flex;
+    height: 48px;
+    margin-top: 40px;
+    border-bottom: 0.8px solid var(--ytm-rule);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .ytm__tab {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .ytm__tab.is-active {
+    color: #ffffff;
+    box-shadow: inset 0 -1px 0 #ffffff;
+  }
+
+  .ytm__tab.is-disabled {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Queue header */
+  .ytm__queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .ytm__queue-from {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 332px;
+  }
+
+  .ytm__save {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 8px;
+    padding: 4px 15px 4px 13px;
+    border-radius: 56px;
+    background: #ffffff;
+    color: #030303;
+    font-weight: 500;
+  }
+
+  .ytm__save img {
+    width: 20px;
+    height: 18px;
+  }
+
+  /* Chips */
+  .ytm__chips {
+    display: flex;
+    gap: 12px;
+    padding: 18px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .ytm__chip {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 14px;
+    line-height: 16px;
+  }
+
+  .ytm__chip.is-active {
+    background: #ffffff;
+    color: #030303;
+  }
+
+  /* Queue */
+  .ytm__queue {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ytm__queue-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 57px;
+    padding: 0 8px;
+    border-bottom: 0.8px solid var(--ytm-rule);
+    text-align: left;
+  }
+
+  .ytm__queue-item.is-current .ytm__queue-row {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .ytm__thumb {
+    position: relative;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-right: 16px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .ytm__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .ytm__thumb-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .ytm__thumb-state img {
+    grid-area: 1 / 1;
+    width: 22px;
+    height: 20px;
+  }
+
+  .ytm__thumb-state .ytm__icon-play {
+    width: 14px;
+    height: 17px;
+    margin-left: 2px;
+  }
+
+  .ytm__queue-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    padding-right: 24px;
+  }
+
+  .ytm__duration {
+    flex-shrink: 0;
+    padding-left: 8px;
+  }
+
+  /* Playback bar */
+  .ytm__bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #212121;
+  }
+
+  /* The red line along the top; a taller invisible strip makes it easy to grab */
+  .ytm__progress {
+    --progress: 0%;
+    position: absolute;
+    inset: -8px 0 auto;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    touch-action: none;
+    outline: none;
+  }
+
+  .ytm__progress-track {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    transition: height 120ms ease;
+  }
+
+  .ytm__progress-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--progress);
+    background: linear-gradient(90deg, #ff0033 80%, #ff2791);
+  }
+
+  .ytm__progress-knob {
+    position: absolute;
+    left: var(--progress);
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    border-radius: 50%;
+    background: #ff0033;
+    scale: 0;
+    transition: scale 120ms ease;
+  }
+
+  .ytm__progress:hover .ytm__progress-track,
+  .ytm__progress:focus-visible .ytm__progress-track,
+  .ytm__progress.is-seeking .ytm__progress-track {
+    height: 4px;
+  }
+
+  .ytm__progress:hover .ytm__progress-knob,
+  .ytm__progress:focus-visible .ytm__progress-knob,
+  .ytm__progress.is-seeking .ytm__progress-knob {
+    scale: 1;
+  }
+
+  .ytm__controls {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-width: 150px;
+  }
+
+  /* Elapsed / total, as in YouTube Music's player bar */
+  .ytm__time {
+    flex-shrink: 0;
+    padding: 0 8px 0 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .ytm__btn {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+
+  .ytm__btn img {
+    grid-area: 1 / 1;
+  }
+
+  .ytm__btn:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: -2px;
+  }
+
+  .ytm__btn--skip {
+    width: 36px;
+    height: 36px;
+    margin: 0 4px 0 8px;
+  }
+
+  .ytm__btn--skip img {
+    width: 18px;
+    height: 16px;
+  }
+
+  .ytm__btn--skip:disabled {
+    opacity: 0.4;
+  }
+
+  .ytm__btn--play {
+    width: 52px;
+    height: 52px;
+    margin: 0 4px 0 8px;
+  }
+
+  .ytm__btn--play .ytm__icon-pause {
+    width: 23.33px;
+    height: 30px;
+  }
+
+  .ytm__btn--play .ytm__icon-play {
+    width: 24px;
+    height: 30px;
+    margin-left: 4px;
+  }
+
+  .ytm__btn--round {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Figma icon boxes: 24px icons inset to their vector bounds */
+  .ytm__btn--round img {
+    width: 19.7px;
+    height: 20.9px;
+  }
+
+  .ytm__btn--more img {
+    width: 4px;
+    height: 16px;
+  }
+
+  button.ytm__btn--round:hover,
+  .ytm__btn--round[aria-pressed="true"] {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .ytm__btn--round[aria-pressed="true"] img {
+    filter: drop-shadow(0 0 0.5px #ffffff);
+  }
+
+  .ytm__btn:disabled {
+    cursor: default;
+  }
+
+  /* Play / pause and the queue's speaker swap with the playback state */
+  .ytm[data-state="paused"] .ytm__icon-pause,
+  .ytm[data-state="paused"] .ytm__icon-speaker,
+  .ytm[data-state="playing"] .ytm__icon-play {
+    display: none;
+  }
+
+  .ytm[data-state="playing"] .ytm__icon-speaker {
+    animation: ytm-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes ytm-pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  .ytm__track {
+    display: flex;
+    align-items: center;
+    flex: 0 1 570px;
+    min-width: 0;
+  }
+
+  .ytm__track-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    max-width: 416px;
+    padding: 0 8px 0 16px;
+  }
+
+  .ytm__track-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 2px;
+    padding-right: 16px;
+  }
+
+  .ytm__end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 24px;
+    flex: 1;
+    padding-right: 59px;
+  }
+
+  .ytm__end img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ytm__end-left {
+    rotate: 90deg;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ytm[data-state="playing"] .ytm__icon-speaker {
+      animation: none;
+    }
+  }
+
+  /* Responsive: the window can be any size, so these follow the window, not the screen */
+  @container window (max-width: 860px) {
+    .ytm__middle {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .ytm__side {
+      display: none;
+    }
+    .ytm__view {
+      border-top: 1px solid var(--ytm-side-rule);
+    }
+    .ytm__end {
+      display: none;
+    }
+    .ytm__track {
+      flex: 1;
+    }
+  }
+
+  @container window (max-width: 640px) {
+    .ytm__nav {
+      padding-right: 16px;
+    }
+    .ytm__brand {
+      width: auto;
+      padding-left: 8px;
+      margin-right: 12px;
+    }
+    .ytm__search {
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      margin: 0 0 0 auto;
+      padding: 0;
+      justify-content: center;
+      background: none;
+      border-color: transparent;
+    }
+    .ytm__search span {
+      display: none;
+    }
+    .ytm__search img {
+      width: 18px;
+      height: 18px;
+    }
+    .ytm__tabs {
+      margin-top: 24px;
+    }
+    .ytm__tab {
+      padding: 0 14px;
+    }
+    .ytm__controls {
+      min-width: 0;
+    }
+    .ytm__time {
+      display: none;
+    }
+    .ytm__track-actions {
+      display: none;
+    }
+    .ytm__track-text {
+      padding-right: 16px;
+    }
+    .ytm__duration {
+      display: none;
+    }
+    .ytm__queue-text {
+      padding-right: 0;
+    }
+  }
+
+  @container window (max-width: 440px) {
+    .ytm__save {
+      display: none;
+    }
+    .ytm__btn--skip {
+      margin: 0 0 0 4px;
+    }
+    .ytm__btn--play {
+      margin: 0 0 0 4px;
+    }
+    .ytm__track-text {
+      padding-left: 10px;
+    }
+  }
+</style>
+
+<script>
+  /*
+   * Playback through the YouTube IFrame Player API. The player sits in the artwork area
+   * (YouTube's terms want its player visible while it plays) and the design's own controls
+   * drive it.
+   *   - Opening the app starts the song. Browsers only allow sound after a click on the page,
+   *     and opening the app from the Dock is that click; if a browser still refuses (or starts it
+   *     muted), the play button stays up and the next click plays it with sound.
+   *   - The play / pause icons follow what YouTube reports, not what was last clicked, so they
+   *     never get out of step with the music.
+   *   - Closing the window pauses the song; minimising keeps it playing, as on a Mac.
+   */
+  type YTPlayer = {
+    playVideo(): void;
+    pauseVideo(): void;
+    seekTo(seconds: number, allowSeekAhead: boolean): void;
+    getCurrentTime(): number;
+    getDuration(): number;
+    getPlayerState(): number;
+    isMuted(): boolean;
+    unMute(): void;
+    setVolume(volume: number): void;
+  };
+  type YTNamespace = {
+    Player: new (el: HTMLElement, options: Record<string, unknown>) => YTPlayer;
+    PlayerState: { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING: number; CUED: number };
+  };
+  type YTWindow = Window & { YT?: YTNamespace; onYouTubeIframeAPIReady?: () => void };
+
+  const root = document.querySelector<HTMLElement>("[data-ytm]");
+  const videoId = root?.dataset.video;
+
+  if (root && videoId) {
+    const w = window as YTWindow;
+    const mount = root.querySelector<HTMLElement>("[data-ytm-player]")!;
+    const progress = root.querySelector<HTMLElement>("[data-ytm-progress]")!;
+    const clock = root.querySelector<HTMLElement>("[data-ytm-time]");
+    const notice = root.querySelector<HTMLElement>("[data-ytm-notice]")!;
+    const toggles = [...root.querySelectorAll<HTMLElement>("[data-ytm-toggle]")];
+
+    const PLAYING = 1;
+    const BUFFERING = 3;
+    /** How long to wait for YouTube to confirm playback before showing the play button again */
+    const START_TIMEOUT = 6000;
+
+    let player: YTPlayer | null = null;
+    let ready = false;
+    let wantsPlay = false;
+    let seeking = false;
+    let timer = 0;
+    let startTimer = 0;
+    let flashTimer = 0;
+
+    const format = (seconds: number) => {
+      const s = Math.max(0, Math.floor(seconds));
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    };
+
+    /** Show "playing" or "paused" everywhere: the bar, the video and the queue */
+    const show = (state: "playing" | "paused") => {
+      root.dataset.state = state;
+      const label = state === "playing" ? "Pause" : "Play";
+      for (const button of toggles) button.setAttribute("aria-label", label);
+    };
+
+    /** Briefly show the play / pause icon over the video, as YouTube does when you toggle */
+    const flash = () => {
+      root.classList.add("is-flashing");
+      clearTimeout(flashTimer);
+      flashTimer = window.setTimeout(() => root.classList.remove("is-flashing"), 700);
+    };
+
+    /** Move the red line and the clock (and tell screen readers where the song is) */
+    const paint = (time: number, duration: number) => {
+      const fraction = duration ? Math.min(1, Math.max(0, time / duration)) : 0;
+      progress.style.setProperty("--progress", `${fraction * 100}%`);
+      progress.setAttribute("aria-valuenow", String(Math.round(fraction * 100)));
+      progress.setAttribute("aria-valuetext", `${format(time)} of ${format(duration)}`);
+      if (clock) clock.textContent = `${format(time)} / ${format(duration)}`;
+    };
+
+    // The timeline ticks four times a second while the song plays (timers keep running when the
+    // window is minimised, so it's right again the moment it comes back)
+    const tick = () => {
+      if (player && ready && !seeking) paint(player.getCurrentTime(), player.getDuration());
+    };
+    const startClock = () => {
+      clearInterval(timer);
+      timer = window.setInterval(tick, 250);
+      tick();
+    };
+    const stopClock = () => {
+      clearInterval(timer);
+      tick();
+    };
+
+    const loadApi = () =>
+      new Promise<YTNamespace>((resolve) => {
+        if (w.YT?.Player) return resolve(w.YT);
+        const previous = w.onYouTubeIframeAPIReady;
+        w.onYouTubeIframeAPIReady = () => {
+          previous?.();
+          resolve(w.YT!);
+        };
+        if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+          const script = document.createElement("script");
+          script.src = "https://www.youtube.com/iframe_api";
+          document.head.append(script);
+        }
+      });
+
+    /** Ask YouTube to play, with sound; if it hasn't started in a few seconds, show the play button again */
+    const requestPlay = () => {
+      if (!player || !ready) return;
+      player.unMute();
+      player.setVolume(100);
+      player.playVideo();
+      clearTimeout(startTimer);
+      startTimer = window.setTimeout(() => {
+        if (player!.getPlayerState() === PLAYING) return;
+        wantsPlay = false;
+        root.classList.remove("is-loading");
+        show("paused");
+      }, START_TIMEOUT);
+    };
+
+    const createPlayer = async () => {
+      if (player) return;
+      const YT = await loadApi();
+      player = new YT.Player(mount, {
+        host: "https://www.youtube-nocookie.com",
+        videoId,
+        width: "100%",
+        height: "100%",
+        playerVars: { controls: 0, disablekb: 1, playsinline: 1, rel: 0, iv_load_policy: 3, fs: 0 },
+        events: {
+          onReady: () => {
+            ready = true;
+            paint(0, player!.getDuration());
+            if (wantsPlay) requestPlay();
+            else root.classList.remove("is-loading");
+          },
+          onStateChange: ({ data }: { data: number }) => {
+            if (data === YT.PlayerState.PLAYING) {
+              clearTimeout(startTimer);
+              root.classList.remove("is-loading");
+              root.classList.add("has-started");
+              show("playing");
+              startClock();
+            } else if (data === YT.PlayerState.BUFFERING) {
+              if (wantsPlay) root.classList.add("is-loading");
+            } else if (data === YT.PlayerState.PAUSED) {
+              root.classList.remove("is-loading");
+              show("paused");
+              stopClock();
+            } else if (data === YT.PlayerState.ENDED) {
+              // Back to the start, ready to play again
+              wantsPlay = false;
+              show("paused");
+              stopClock();
+              player!.seekTo(0, true);
+              player!.pauseVideo();
+              paint(0, player!.getDuration());
+            }
+          },
+          // The video can't be played here (removed, private, or embedding blocked): say so
+          onError: () => {
+            wantsPlay = false;
+            clearTimeout(startTimer);
+            root.classList.remove("is-loading");
+            show("paused");
+            notice.hidden = false;
+          },
+        },
+      });
+    };
+
+    const isPlaying = () => root.dataset.state === "playing";
+
+    const play = () => {
+      wantsPlay = true;
+      root.classList.add("is-loading");
+      if (ready) requestPlay();
+      else createPlayer();
+    };
+
+    const pause = () => {
+      wantsPlay = false;
+      clearTimeout(startTimer);
+      root.classList.remove("is-loading");
+      show("paused");
+      if (ready) player!.pauseVideo();
+    };
+
+    const toggle = () => {
+      if (isPlaying() || (wantsPlay && root.classList.contains("is-loading"))) pause();
+      else play();
+      flash();
+    };
+
+    for (const button of toggles) button.addEventListener("click", toggle);
+
+    // If a browser started the song muted, the first click anywhere in the app turns the sound on
+    root.addEventListener("pointerdown", () => {
+      if (ready && player!.isMuted()) player!.unMute();
+    });
+
+    // "Previous" restarts the song (play first: a seek made while paused reports "paused" again
+    // once it lands, which would stop the song straight after it restarts)
+    root.querySelector("[data-ytm-restart]")?.addEventListener("click", () => {
+      if (!ready) return play();
+      if (!isPlaying()) play();
+      player!.seekTo(0, true);
+      paint(0, player!.getDuration());
+    });
+
+    // Like and dislike: one or the other (or neither), just for fun
+    const rates = [...root.querySelectorAll<HTMLButtonElement>("[data-ytm-rate]")];
+    for (const button of rates) {
+      button.addEventListener("click", () => {
+        const on = button.getAttribute("aria-pressed") !== "true";
+        for (const other of rates) other.setAttribute("aria-pressed", String(other === button && on));
+      });
+    }
+
+    // Seek by clicking or dragging along the red line
+    const seekTo = (clientX: number, commit: boolean) => {
+      if (!ready) return;
+      const rect = progress.getBoundingClientRect();
+      const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      const duration = player!.getDuration();
+      paint(fraction * duration, duration);
+      if (commit) player!.seekTo(fraction * duration, true);
+    };
+
+    progress.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || !ready) return;
+      seeking = true;
+      progress.setPointerCapture(event.pointerId);
+      progress.classList.add("is-seeking");
+      seekTo(event.clientX, false);
+      const move = (e: PointerEvent) => seekTo(e.clientX, false);
+      const end = (e: PointerEvent) => {
+        seekTo(e.clientX, true);
+        seeking = false;
+        progress.classList.remove("is-seeking");
+        progress.removeEventListener("pointermove", move);
+        progress.removeEventListener("pointerup", end);
+        progress.removeEventListener("pointercancel", end);
+      };
+      progress.addEventListener("pointermove", move);
+      progress.addEventListener("pointerup", end);
+      progress.addEventListener("pointercancel", end);
+    });
+
+    progress.addEventListener("keydown", (event) => {
+      if (!ready || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+      event.preventDefault();
+      const step = event.key === "ArrowRight" ? 5 : -5;
+      const duration = player!.getDuration();
+      const time = Math.min(duration, Math.max(0, player!.getCurrentTime() + step));
+      player!.seekTo(time, true);
+      paint(time, duration);
+    });
+
+    // Space plays and pauses, like the real app (buttons and the seek bar keep their own keys)
+    root.closest(".window")?.addEventListener("keydown", (event) => {
+      const e = event as KeyboardEvent;
+      const target = e.target as HTMLElement;
+      if (e.key !== " " || target.closest("button, [role='slider'], input, a")) return;
+      e.preventDefault();
+      toggle();
+    });
+
+    // Opening the app starts the song; closing the window pauses it
+    let wasOpen = false;
+    document.addEventListener("windows:change", (event) => {
+      const isOpen = (event as CustomEvent).detail.open.includes("music");
+      if (isOpen && !wasOpen) play();
+      if (!isOpen && wasOpen) pause();
+      wasOpen = isOpen;
+    });
+  }
+</script>

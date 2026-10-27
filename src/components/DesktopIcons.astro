@@ -1,0 +1,489 @@
+---
+/*
+ * Folder icons on the desktop (Figma: Macbook Folder Icon Designs, 70 x 70).
+ * Laid out like macOS: a column down the right edge of the screen.
+ * Hovering a folder pops up that project's showreel (Figma: Showreel Animation) beside it.
+ */
+import { Image } from "astro:assets";
+import { projects } from "../data/projects";
+import { cv } from "../data/cv";
+---
+
+<ul class="desktop-icons" aria-label="Projects">
+  {
+    projects.map((project, index) => (
+      <li>
+        <button class="desktop-icon" type="button" data-open-window={project.id} style={{ "--i": index }}>
+          <Image class="desktop-icon__img" src={project.icon} alt="" width={70} height={70} densities={[1, 2, 3]} draggable="false" />
+          <span class="desktop-icon__label">{project.name}</span>
+          <span class="showreel" aria-hidden="true">
+            <video
+              class="showreel__video"
+              src={project.showreel}
+              width="240"
+              height="179"
+              muted
+              loop
+              playsinline
+              disablepictureinpicture
+              preload="none"></video>
+            <span class="showreel__label">{project.name}</span>
+          </span>
+        </button>
+      </li>
+    ))
+  }
+  <li>
+    <!-- Figma: CV Icon Design ("📄 Page facing up"); opens the CV window -->
+    <button class="desktop-icon desktop-icon--file" type="button" data-open-window={cv.id} style={{ "--i": projects.length }}>
+      <Image class="desktop-icon__img" src={cv.icon} alt="" width={70} height={70} densities={[1, 2, 3]} draggable="false" />
+      <span class="desktop-icon__label">{cv.name}</span>
+    </button>
+  </li>
+</ul>
+
+<style>
+  .desktop-icons {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(auto-fill, 102px);
+    gap: 6px 14px;
+    direction: rtl; /* new columns grow leftwards, like the Finder desktop */
+    height: calc(100% - 100px); /* stop above the Dock */
+    align-content: start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .desktop-icon {
+    position: relative;
+    direction: ltr;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 92px;
+    padding: 3px 0;
+    color: #fff;
+    touch-action: none; /* let touch drags move the folder */
+    translate: var(--x, 0) var(--y, 0);
+  }
+
+  .desktop-icon.is-dragging {
+    z-index: 5;
+    opacity: 0.85;
+  }
+
+  /*
+   * Folders stay hidden until the script has placed them (random scatter or saved layout),
+   * then pop in one after another. :root[data-theme] is only set when JavaScript runs, so
+   * without JavaScript the folders simply show in their column.
+   */
+  :global(:root[data-theme]) .desktop-icons:not(.is-ready) .desktop-icon {
+    opacity: 0;
+  }
+
+  .desktop-icons.is-ready .desktop-icon {
+    animation: folder-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    animation-delay: calc(120ms + var(--i, 0) * 70ms);
+  }
+
+  @keyframes folder-in {
+    from {
+      opacity: 0;
+      scale: 0.6;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .desktop-icons.is-ready .desktop-icon {
+      animation: none;
+    }
+  }
+
+  .desktop-icon__img {
+    width: 70px;
+    height: 70px;
+    padding: 2px;
+    border-radius: 6px;
+    user-select: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  }
+
+  .desktop-icon__label {
+    max-width: 100%;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 15px;
+    font-weight: var(--weight-emphasized);
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    overflow-wrap: anywhere;
+  }
+
+  .desktop-icon:hover .desktop-icon__img,
+  .desktop-icon.is-selected .desktop-icon__img {
+    background: rgba(0, 0, 0, 0.18);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+
+  .desktop-icon.is-selected .desktop-icon__label {
+    background: var(--accent-indigo);
+    text-shadow: none;
+  }
+
+  .desktop-icon:focus-visible {
+    outline: none;
+  }
+
+  .desktop-icon:focus-visible .desktop-icon__label {
+    outline: 2px solid var(--accent-indigo);
+  }
+
+  /*
+   * Showreel preview: 240px wide at the Figma frame's 997:745 ratio, floating beside the folder
+   * on whichever side faces the middle of the screen (data-side, set by the script).
+   * It springs out of the folder (scale from the folder-side edge, a little tilt and overshoot)
+   * and tucks back in when the pointer leaves.
+   */
+  .desktop-icon.is-previewing {
+    z-index: 6; /* above neighbouring folders; open windows still sit on top */
+  }
+
+  .showreel {
+    --gap: 14px;
+    position: absolute;
+    top: calc(50% + var(--preview-dy, 0px));
+    left: calc(100% + var(--gap));
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    opacity: 0;
+    translate: 0 -50%;
+    scale: 0.2;
+    rotate: -8deg;
+    transform-origin: 0% 50%;
+    transition:
+      opacity 140ms ease-in,
+      scale 180ms ease-in,
+      rotate 180ms ease-in;
+  }
+
+  .showreel[data-side="left"] {
+    left: auto;
+    right: calc(100% + var(--gap));
+    transform-origin: 100% 50%;
+    rotate: 8deg;
+  }
+
+  .desktop-icon.is-previewing .showreel {
+    opacity: 1;
+    scale: 1;
+    rotate: -1.5deg;
+    transition:
+      opacity 120ms ease-out,
+      scale 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      rotate 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .desktop-icon.is-previewing .showreel[data-side="left"] {
+    rotate: 1.5deg;
+  }
+
+  .showreel__video {
+    display: block;
+    width: 240px;
+    height: auto;
+    aspect-ratio: 997 / 745;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #1d1d1f;
+    box-shadow:
+      0 0 0 0.5px rgba(0, 0, 0, 0.25),
+      0 2px 6px rgba(0, 0, 0, 0.18),
+      0 18px 40px rgba(0, 0, 0, 0.32);
+  }
+
+  .showreel__label {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: var(--weight-emphasized);
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Reduced motion: no pop or tilt, just a quick fade (the video shows its first slide, still) */
+  @media (prefers-reduced-motion: reduce) {
+    .showreel,
+    .showreel[data-side="left"],
+    .desktop-icon.is-previewing .showreel,
+    .desktop-icon.is-previewing .showreel[data-side="left"] {
+      scale: 1;
+      rotate: 0deg;
+      transition: opacity 120ms ease;
+    }
+  }
+
+  /* No hover on touch screens, so no preview there; a tap just opens the project */
+  @media not ((hover: hover) and (pointer: fine)) {
+    .showreel {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+   * Drag folders around the desktop. Each folder keeps its slot in the grid and is offset
+   * with `translate`, so moving one never reshuffles the others. A press that moves less
+   * than DRAG_THRESHOLD is still a click and opens the project.
+   */
+  const DRAG_THRESHOLD = 4;
+  const STORAGE_KEY = "desktop-icon-positions";
+
+  type Offsets = Record<string, { x: number; y: number }>;
+
+  const desktop = document.querySelector<HTMLElement>(".desktop");
+  const icons = [...document.querySelectorAll<HTMLElement>(".desktop-icon")];
+
+  const load = (): Offsets => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
+    } catch {
+      return {};
+    }
+  };
+
+  const save = (offsets: Offsets) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(offsets));
+    } catch {}
+  };
+
+  const offsets = load();
+
+  const getOffset = (icon: HTMLElement) => offsets[icon.dataset.openWindow!] ?? { x: 0, y: 0 };
+
+  /** Keep the whole folder on the desktop (below the menu bar, inside the screen edges) */
+  const clamp = (icon: HTMLElement, x: number, y: number) => {
+    if (!desktop) return { x, y };
+    const area = desktop.getBoundingClientRect();
+    const current = getOffset(icon);
+    const rect = icon.getBoundingClientRect();
+    // Where the icon sits with no offset
+    const homeLeft = rect.left - current.x;
+    const homeTop = rect.top - current.y;
+    return {
+      x: Math.min(Math.max(x, area.left - homeLeft), area.right - rect.width - homeLeft),
+      y: Math.min(Math.max(y, area.top - homeTop), area.bottom - rect.height - homeTop),
+    };
+  };
+
+  const apply = (icon: HTMLElement, x: number, y: number) => {
+    const pos = clamp(icon, x, y);
+    offsets[icon.dataset.openWindow!] = pos;
+    icon.style.setProperty("--x", `${pos.x}px`);
+    icon.style.setProperty("--y", `${pos.y}px`);
+  };
+
+  /*
+   * Showreel previews. A short delay stops previews flickering open as the pointer sweeps past
+   * folders. The preview opens towards the middle of the screen, is nudged vertically to stay
+   * clear of the menu bar and Dock, and restarts from the first slide every time.
+   */
+  const HOVER_DELAY = 140;
+  const EDGE = 8;
+  const DOCK_CLEARANCE = 84;
+  const canHover = matchMedia("(hover: hover) and (pointer: fine)");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const hoverTimers = new WeakMap<HTMLElement, number>();
+
+  const showPreview = (icon: HTMLElement) => {
+    const preview = icon.querySelector<HTMLElement>(".showreel");
+    const video = preview?.querySelector("video");
+    if (!desktop || !preview || !video) return;
+
+    const area = desktop.getBoundingClientRect();
+    const rect = icon.getBoundingClientRect();
+    preview.dataset.side = rect.left + rect.width / 2 > area.left + area.width / 2 ? "left" : "right";
+
+    const height = preview.offsetHeight;
+    const centre = rect.top + rect.height / 2;
+    const top = centre - height / 2;
+    const bottom = centre + height / 2;
+    const minTop = area.top + EDGE;
+    const maxBottom = area.bottom - DOCK_CLEARANCE;
+    const dy = top < minTop ? minTop - top : bottom > maxBottom ? maxBottom - bottom : 0;
+    preview.style.setProperty("--preview-dy", `${dy}px`);
+
+    video.preload = "auto"; // first hover starts the download
+    icon.classList.add("is-previewing");
+    if (!reduceMotion.matches) video.play().catch(() => {});
+  };
+
+  const hidePreview = (icon: HTMLElement) => {
+    window.clearTimeout(hoverTimers.get(icon));
+    if (!icon.classList.contains("is-previewing")) return;
+    icon.classList.remove("is-previewing");
+    const video = icon.querySelector("video");
+    // Rewind once the tuck-away animation has finished, so the next hover starts at slide 1
+    window.setTimeout(() => {
+      if (!video || icon.classList.contains("is-previewing")) return;
+      video.pause();
+      video.currentTime = 0;
+    }, 200);
+  };
+
+  for (const icon of icons) {
+    icon.addEventListener("pointerenter", (event) => {
+      if (event.pointerType !== "mouse" || !canHover.matches || icon.classList.contains("is-dragging")) return;
+      hoverTimers.set(icon, window.setTimeout(() => showPreview(icon), HOVER_DELAY));
+    });
+    icon.addEventListener("pointerleave", () => hidePreview(icon));
+    // Pressing (to open or drag) puts the preview away
+    icon.addEventListener("pointerdown", () => hidePreview(icon));
+  }
+
+  /** Re-clamp every moved folder, e.g. after the screen got smaller than when it was saved */
+  const refitAll = () => {
+    for (const icon of icons) {
+      const { x, y } = getOffset(icon);
+      if (x || y) apply(icon, x, y);
+    }
+  };
+
+  /*
+   * First visit (nothing saved yet): scatter the folders at random across the desktop.
+   * Each folder tries random spots until it finds one at least MIN_DISTANCE from the others,
+   * keeping clear of the screen edges and the Dock. Once a visitor drags a folder, the whole
+   * arrangement is saved and restored on later visits instead.
+   */
+  const SCATTER_PAD = 24;
+  const SCATTER_DOCK = 110;
+  const MIN_DISTANCE = 130;
+  const ATTEMPTS = 80;
+
+  /** Scatter `targets`, keeping clear of every other icon already on the desktop */
+  const scatter = (targets: HTMLElement[]) => {
+    if (!desktop) return;
+    const area = desktop.getBoundingClientRect();
+    const placed = icons
+      .filter((icon) => !targets.includes(icon))
+      .map((icon) => {
+        const rect = icon.getBoundingClientRect();
+        return { x: rect.left, y: rect.top };
+      });
+
+    for (const icon of targets) {
+      const home = icon.getBoundingClientRect(); // no offset applied yet
+      const minX = area.left + SCATTER_PAD;
+      const maxX = Math.max(minX, area.right - SCATTER_PAD - home.width);
+      const minY = area.top + SCATTER_PAD;
+      const maxY = Math.max(minY, area.bottom - SCATTER_DOCK - home.height);
+
+      let best = { x: minX, y: minY };
+      let bestGap = -1;
+      for (let i = 0; i < ATTEMPTS; i++) {
+        const spot = { x: minX + Math.random() * (maxX - minX), y: minY + Math.random() * (maxY - minY) };
+        const gap = Math.min(Infinity, ...placed.map((p) => Math.hypot(p.x - spot.x, p.y - spot.y)));
+        if (gap > bestGap) {
+          best = spot;
+          bestGap = gap;
+        }
+        if (gap >= MIN_DISTANCE) break;
+      }
+
+      placed.push(best);
+      apply(icon, best.x - home.left, best.y - home.top);
+    }
+  };
+
+  const hasSavedLayout = icons.some((icon) => offsets[icon.dataset.openWindow!]);
+
+  if (hasSavedLayout) {
+    // Restore where the visitor left them last time
+    for (const icon of icons) {
+      const saved = offsets[icon.dataset.openWindow!];
+      if (saved) {
+        icon.style.setProperty("--x", `${saved.x}px`);
+        icon.style.setProperty("--y", `${saved.y}px`);
+      }
+    }
+    // Icons added since that layout was saved (e.g. the CV) get a free spot of their own
+    const unplaced = icons.filter((icon) => !offsets[icon.dataset.openWindow!]);
+    if (unplaced.length) scatter(unplaced);
+  } else {
+    scatter(icons);
+  }
+
+  // Positions are set: reveal the folders (they pop in, staggered; see the CSS)
+  document.querySelector(".desktop-icons")?.classList.add("is-ready");
+
+  for (const icon of icons) {
+    let dragged = false;
+
+    icon.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const start = { x: event.clientX, y: event.clientY };
+      const origin = getOffset(icon);
+      dragged = false;
+
+      // macOS selects on press
+      for (const other of icons) other.classList.toggle("is-selected", other === icon);
+
+      const move = (e: PointerEvent) => {
+        const dx = e.clientX - start.x;
+        const dy = e.clientY - start.y;
+        if (!dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+        if (!dragged) {
+          dragged = true;
+          icon.setPointerCapture(e.pointerId);
+          icon.classList.add("is-dragging");
+        }
+        apply(icon, origin.x + dx, origin.y + dy);
+      };
+
+      const end = () => {
+        icon.removeEventListener("pointermove", move);
+        icon.removeEventListener("pointerup", end);
+        icon.removeEventListener("pointercancel", end);
+        if (dragged) {
+          icon.classList.remove("is-dragging");
+          save(offsets);
+        }
+      };
+
+      icon.addEventListener("pointermove", move);
+      icon.addEventListener("pointerup", end);
+      icon.addEventListener("pointercancel", end);
+    });
+
+    // A drag isn't a click: stop it before the window manager opens the project
+    icon.addEventListener(
+      "click",
+      (event) => {
+        if (!dragged) return;
+        dragged = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      },
+      { capture: true },
+    );
+  }
+
+  if (hasSavedLayout) refitAll();
+  // Pull folders back on screen if the browser gets smaller
+  addEventListener("resize", refitAll);
+</script>

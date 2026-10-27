@@ -1,0 +1,526 @@
+---
+/*
+ * Case study CTA (Figma: client project template → CTA, 6422:577).
+ * Header: "Let’s see if [portrait][You] / are a match." in Geist 64/68.
+ * Img: a Calendly-style booking card (Figma: Calendar Design, 736 x 564), indented 97px.
+ * The whole card is shown, scaled to fit the column next to its indent, so nothing is clipped
+ * and nothing overflows sideways. It's built in HTML so it stays sharp at any size, and the
+ * whole card opens the Calendly window (falls back to Calendly in a new tab without JavaScript).
+ */
+import "@fontsource-variable/geist";
+import "@fontsource/instrument-serif";
+import { Image } from "astro:assets";
+import portrait from "../assets/cta/portrait-circle.png";
+import youCircle from "../assets/cta/you-circle.svg";
+import avatar from "../assets/cta/avatar.png";
+import iconTime from "../assets/cta/icon-time.svg";
+import iconVideo from "../assets/cta/icon-video.svg";
+import iconPrev from "../assets/cta/icon-prev.svg";
+import iconNext from "../assets/cta/icon-next.svg";
+import iconGlobe from "../assets/cta/icon-globe.svg";
+import iconCaret from "../assets/cta/icon-caret.svg";
+import iconHelp from "../assets/cta/icon-help.svg";
+import darkTime from "../assets/cta/dark/icon-time.svg";
+import darkVideo from "../assets/cta/dark/icon-video.svg";
+import darkPrev from "../assets/cta/dark/icon-prev.svg";
+import darkNext from "../assets/cta/dark/icon-next.svg";
+import darkGlobe from "../assets/cta/dark/icon-globe.svg";
+import darkCaret from "../assets/cta/dark/icon-caret.svg";
+import darkHelp from "../assets/cta/dark/icon-help.svg";
+import { links } from "../data/dock";
+
+const CALENDLY_URL = links.calendly;
+
+const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Day grid exactly as drawn in Figma (first Monday empty); 22 has the "today" dot
+const days: (number | null)[] = [null, ...Array.from({ length: 30 }, (_, i) => i + 1)];
+const available = new Set([23, 24, 25, 29, 30]);
+const today = 22;
+---
+
+<section class="booking-cta" aria-labelledby="booking-heading">
+  <h2 class="booking-cta__heading" id="booking-heading">
+    <span class="sr-only">Let’s see if we are a match.</span>
+    <span class="booking-cta__line" aria-hidden="true">
+      Let’s see if
+      <span class="booking-cta__faces">
+        <Image class="booking-cta__portrait" src={portrait} alt="" width={64} height={64} densities={[1, 2, 3]} loading="lazy" />
+        <img class="booking-cta__you" src={youCircle.src} alt="" width="64" height="64" loading="lazy" />
+      </span>
+    </span>
+    <span class="booking-cta__line" aria-hidden="true">are a match.</span>
+  </h2>
+
+  <a
+    class="booking"
+    href={CALENDLY_URL}
+    target="_blank"
+    rel="noopener"
+    data-open-window="calendly"
+    aria-haspopup="dialog"
+    aria-label="Book a 20-minute chat with Adriaan on Calendly"
+  >
+    <div class="booking__card" aria-hidden="true">
+      <div class="booking__summary">
+        <div class="booking__content">
+          <div class="booking__account">
+            <img class="booking__avatar" src={avatar.src} alt="" width="71" height="71" loading="lazy" />
+            <div class="booking__title">
+              <span class="booking__name">Adriaan Myburgh</span>
+              <span class="booking__event">20 Minute Chat</span>
+            </div>
+          </div>
+          <div class="booking__details">
+            <div class="booking__detail">
+              <img class="booking__icon only-light" src={iconTime.src} alt="" />
+              <img class="booking__icon only-dark" src={darkTime.src} alt="" />
+              <span>20 min</span>
+            </div>
+            <div class="booking__detail booking__detail--wrap">
+              <img class="booking__icon only-light" src={iconVideo.src} alt="" />
+              <img class="booking__icon only-dark" src={darkVideo.src} alt="" />
+              <span>Web conferencing details provided upon confirmation.</span>
+            </div>
+          </div>
+        </div>
+        <div class="booking__footer">
+          <span class="booking__footer-link">Cookie settings</span>
+          <span>Report abuse</span>
+        </div>
+      </div>
+
+      <div class="booking__calendar">
+        <div class="booking__picker">
+          <span class="booking__heading">Select a Date &amp; Time</span>
+          <div class="booking__month">
+            <img class="booking__nav only-light" src={iconPrev.src} alt="" />
+            <img class="booking__nav only-dark" src={darkPrev.src} alt="" />
+            <span>Nov 2026</span>
+            <img class="booking__nav only-light" src={iconNext.src} alt="" />
+            <img class="booking__nav only-dark" src={darkNext.src} alt="" />
+          </div>
+          <div class="booking__grid">
+            {weekdays.map((day) => <span class="booking__weekday">{day}</span>)}
+            {
+              days.map((day) => (
+                <span
+                  class:list={[
+                    "booking__day",
+                    { "is-available": day && available.has(day), "is-today": day === today },
+                  ]}
+                >
+                  {day ?? ""}
+                </span>
+              ))
+            }
+          </div>
+          <div class="booking__timezone">
+            <span class="booking__timezone-title">Time zone</span>
+            <div class="booking__select">
+              <img class="booking__globe only-light" src={iconGlobe.src} alt="" />
+              <img class="booking__globe only-dark" src={darkGlobe.src} alt="" />
+              <span>Central European Time (8:11pm)</span>
+              <img class="booking__caret only-light" src={iconCaret.src} alt="" />
+              <img class="booking__caret only-dark" src={darkCaret.src} alt="" />
+            </div>
+          </div>
+        </div>
+        <span class="booking__help">
+          <img class="booking__help-icon only-light" src={iconHelp.src} alt="" />
+          <img class="booking__help-icon only-dark" src={darkHelp.src} alt="" />
+          Troubleshooting
+        </span>
+      </div>
+    </div>
+  </a>
+</section>
+
+<style>
+  /*
+   * Figma: CTA column, left-aligned, 48px between heading and calendar.
+   * The heading scales with the column (8.696cqi = 64 / 736), capped at Figma's 64px.
+   */
+  .booking-cta {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 48px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Heading/Heading - H1: Geist 64 / 68, -0.8px */
+  .booking-cta__heading {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    font-family: "Geist Variable", "Geist", var(--font-system);
+    font-size: min(64px, 8.696cqi);
+    font-weight: 400;
+    line-height: 1.0625;
+    letter-spacing: -0.0125em;
+    color: var(--content-text);
+  }
+
+  .booking-cta__line {
+    display: flex;
+    align-items: center;
+    gap: 0.1875em; /* 12px */
+    white-space: nowrap;
+  }
+
+  .booking-cta__faces {
+    display: flex;
+    align-items: center;
+  }
+
+  /* 64px circles; the portrait overlaps the "You" badge by 12px */
+  .booking-cta__portrait,
+  .booking-cta__you {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+  }
+
+  /* Figma "Client Logo": the headshot, cropped square from the bottom of the photo as in Figma */
+  .booking-cta__portrait {
+    position: relative;
+    z-index: 1;
+    margin-right: -0.1875em;
+    border: 0.03125em solid #f5f4f1; /* Ink/Light, 2px */
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  /*
+   * Booking card. Figma indents the 736 x 564 card by 97px inside a 736px column; here the
+   * indent is kept and the card is scaled so its right edge meets the column edge, so it is
+   * shown whole without overflowing. --c is one Figma pixel of the card at the current size,
+   * so every measurement below is calc(<figma px> * var(--c)) and the card scales as one piece.
+   */
+  .booking {
+    container-type: inline-size;
+    display: block;
+    width: 100%;
+    max-width: 736px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 12px;
+  }
+
+  /*
+   * Figma: Calendar Design → "Calendar Light Mode" (6486:45391) and "Calendar Dark Mode"
+   * (6486:45522). Same card; the dark one is a frosted panel (white at 10%) with white type.
+   */
+  .booking__card {
+    --c: calc(100cqi * 639 / 736 / 736); /* card width (736 - 97 of 736) ÷ 736 Figma px */
+    --cal-fill: #fcfcfc;
+    --cal-text: #1a1a1a;
+    --cal-muted: rgba(26, 26, 26, 0.48);
+    --cal-sunday: rgba(26, 26, 26, 0.61);
+    --cal-rule: rgba(0, 0, 0, 0.1);
+    position: relative;
+    display: flex;
+    width: calc(736 * var(--c));
+    height: calc(564 * var(--c));
+    margin-left: calc(100cqi * 97 / 736);
+    border-radius: calc(12 * var(--c));
+    background: var(--cal-fill);
+    font-family: "Geist Variable", "Geist", var(--font-system);
+    color: var(--cal-text);
+    transition:
+      translate 260ms cubic-bezier(0.2, 0.8, 0.3, 1),
+      box-shadow 260ms ease;
+  }
+
+  :global(:root[data-theme="dark"]) .booking__card {
+    --cal-fill: rgba(252, 252, 252, 0.1);
+    --cal-text: #ffffff;
+    --cal-muted: rgba(255, 255, 255, 0.48);
+    --cal-sunday: rgba(255, 255, 255, 0.64);
+    --cal-rule: rgba(255, 255, 255, 0.1);
+  }
+
+  /*
+   * Accent/Gradient border (blue → violet → red → orange), drawn as a 1px ring on its own layer
+   * so it doesn't show through the see-through dark card.
+   */
+  .booking__card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #1e00e3 0%, #e347ff 40%, #ff4747 75%, #ff9500 100%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Hover / focus: the card lifts to invite the click */
+  .booking:hover .booking__card,
+  .booking:focus-visible .booking__card {
+    translate: 0 calc(-8 * var(--c));
+    box-shadow: 0 calc(16 * var(--c)) calc(40 * var(--c)) rgba(30, 0, 227, 0.14);
+  }
+
+  .booking:focus-visible {
+    outline: none;
+  }
+
+  .booking:focus-visible .booking__card {
+    outline: 2px solid var(--accent-indigo);
+    outline-offset: 4px;
+  }
+
+  /* Left panel: Account-details-summary (content at the top, footer links at the bottom) */
+  .booking__summary {
+    flex: 0 0 calc(368.396 * var(--c));
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: calc(26.683 * var(--c));
+  }
+
+  .booking__content {
+    display: flex;
+    flex-direction: column;
+    gap: calc(29.319 * var(--c));
+  }
+
+  .booking__account {
+    display: flex;
+    align-items: center;
+    gap: calc(17.591 * var(--c));
+  }
+
+  .booking__avatar {
+    width: calc(71 * var(--c));
+    height: calc(71 * var(--c));
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .booking__title {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .booking__name {
+    font-size: calc(15.209 * var(--c));
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--cal-muted);
+  }
+
+  .booking__event {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: calc(43.978 * var(--c));
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .booking__details {
+    display: flex;
+    flex-direction: column;
+    gap: calc(11.407 * var(--c));
+  }
+
+  .booking__detail {
+    display: flex;
+    align-items: center;
+    gap: calc(8.796 * var(--c));
+    font-size: calc(15.248 * var(--c));
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--cal-muted);
+  }
+
+  .booking__detail--wrap span {
+    width: calc(274.141 * var(--c));
+  }
+
+  .booking__icon {
+    width: calc(18.374 * var(--c));
+    height: calc(19.672 * var(--c));
+    flex-shrink: 0;
+  }
+
+  .booking__footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: calc(13.342 * var(--c));
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .booking__footer-link {
+    color: #0069ff;
+  }
+
+  /* Right panel: Calendar section (picker at the top, Troubleshooting at the bottom) */
+  .booking__calendar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: calc(26.683 * var(--c));
+    border-left: 1px solid var(--cal-rule);
+  }
+
+  .booking__picker {
+    display: flex;
+    flex-direction: column;
+    gap: calc(21.347 * var(--c));
+  }
+
+  .booking__heading {
+    font-family: "Instrument Serif", Georgia, serif;
+    text-align: center;
+    font-size: calc(26.387 * var(--c));
+    line-height: 1.1;
+  }
+
+  .booking__month {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: calc(316.029 * var(--c));
+    font-size: calc(15.248 * var(--c));
+    line-height: 1.5;
+  }
+
+  .booking__nav {
+    width: calc(34.91 * var(--c));
+    height: calc(37.377 * var(--c));
+  }
+
+  /* 7 x 40.42 columns, 5.7 apart; 43.28-tall day buttons, 5.13 apart */
+  .booking__grid {
+    display: grid;
+    grid-template-columns: repeat(7, calc(40.422 * var(--c)));
+    column-gap: calc(5.704 * var(--c));
+    row-gap: calc(5.131 * var(--c));
+    margin-top: calc(-3.756 * var(--c)); /* month row → weekdays is 17.59px in Figma */
+  }
+
+  .booking__weekday {
+    margin-bottom: calc(6.597 * var(--c)); /* weekday → first row is 11.73px in Figma */
+    font-size: calc(11.436 * var(--c));
+    line-height: calc(11.407 * var(--c));
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .booking__day {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: calc(43.278 * var(--c));
+    border-radius: 999px;
+    font-size: calc(15.248 * var(--c));
+    line-height: 1.5;
+    color: var(--cal-muted);
+  }
+
+  /* Sundays are a touch darker in Figma */
+  .booking__day:nth-child(7n) {
+    color: var(--cal-sunday);
+  }
+
+  .booking__day.is-available {
+    background: rgba(0, 105, 255, 0.08);
+    color: #0069ff;
+    font-weight: 700;
+  }
+
+  .booking__day.is-today {
+    padding-bottom: calc(2.95 * var(--c));
+  }
+
+  .booking__day.is-today::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: calc(30.984 * var(--c));
+    width: calc(3.675 * var(--c));
+    height: calc(3.934 * var(--c));
+    translate: -50% 0;
+    border-radius: 50%;
+    background: var(--cal-muted);
+  }
+
+  .booking__timezone {
+    display: flex;
+    flex-direction: column;
+    gap: calc(5.704 * var(--c));
+  }
+
+  .booking__timezone-title {
+    font-size: calc(15.248 * var(--c));
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .booking__select {
+    display: flex;
+    align-items: center;
+    gap: calc(11.407 * var(--c));
+    font-size: calc(13.342 * var(--c));
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .booking__globe {
+    width: calc(12.862 * var(--c));
+    height: calc(13.77 * var(--c));
+    scale: 1 -1;
+  }
+
+  .booking__caret {
+    width: calc(7.35 * var(--c));
+    height: calc(7.869 * var(--c));
+    margin-left: calc(-7.605 * var(--c)); /* Figma: 3.8px after the label */
+    scale: 1 -1;
+  }
+
+  .booking__help {
+    display: flex;
+    align-items: center;
+    gap: calc(7.605 * var(--c));
+    padding: calc(11.436 * var(--c)) calc(15.209 * var(--c));
+    border: calc(0.951 * var(--c)) solid var(--cal-text);
+    border-radius: 999px;
+    font-size: calc(13.342 * var(--c));
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .booking__help-icon {
+    width: calc(14.699 * var(--c));
+    height: calc(15.738 * var(--c));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .booking__card {
+      transition: none;
+    }
+  }
+</style>

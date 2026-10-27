@@ -1,0 +1,594 @@
+---
+/*
+ * Spotlight: search the whole site from the menu bar's magnifying glass (or ⌘K / Ctrl+K).
+ * Like macOS Spotlight, a frosted search bar drops in near the top of the screen and results
+ * appear under it in groups: Top Hit, Applications, Client Projects, Documents, Music, Photos.
+ * Everything is indexed at build time: apps in the Dock, every case study (name, role, scope,
+ * timeline, intro and the text inside it), the CV, the song, and each photo by its description.
+ * ↑ / ↓ move through the results, Return opens one, Escape closes.
+ */
+import { Image } from "astro:assets";
+import DockIcon from "./DockIcon.astro";
+import { dockApps, links, type DockApp } from "../data/dock";
+import { projects } from "../data/projects";
+import { cv } from "../data/cv";
+import { photos } from "../data/photos";
+import { nowPlaying, queue } from "../data/music";
+
+/** Lower-cased, accents and apostrophes removed, so "lions head" finds "Lion’s Head" */
+const normalise = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[’'`]/g, "")
+    .toLowerCase();
+
+const app = (id: string) => dockApps.find((a) => a.id === id) as DockApp;
+
+interface AppResult {
+  id: string;
+  title: string;
+  subtitle: string;
+  keywords: string;
+  /** Opens one of the site's windows */
+  window?: string;
+  /** Or a link (new tab, except mailto) */
+  href?: string;
+  /** Or flips light / dark mode */
+  theme?: boolean;
+  suggest?: number;
+}
+
+const apps: AppResult[] = [
+  { id: "finder", title: "Finder", subtitle: "Browse every client project", keywords: "projects files folders work portfolio directory", window: "finder", suggest: 1 },
+  { id: "photos", title: "Photos", subtitle: `${photos.length} photos`, keywords: "pictures images gallery life", window: "photos", suggest: 2 },
+  { id: "music", title: "YouTube Music", subtitle: `Now playing: ${nowPlaying.title} — ${nowPlaying.artist}`, keywords: "music song play listen youtube", window: "music", suggest: 3 },
+  { id: "calendly", title: "Calendly", subtitle: "Book a 20 minute chat", keywords: "book call meeting schedule calendar chat contact hire availability", window: "calendly", suggest: 5 },
+  { id: "gmail", title: "Gmail", subtitle: links.email.replace("mailto:", ""), keywords: "email mail contact hire message", href: links.email },
+  { id: "whatsapp", title: "WhatsApp", subtitle: "Message Adriaan", keywords: "message chat contact text phone", href: links.whatsapp },
+  { id: "linkedin", title: "LinkedIn", subtitle: "Adriaan Myburgh on LinkedIn", keywords: "profile social connect work experience", href: links.linkedin },
+  { id: "maps", title: "Maps", subtitle: "Cape Town, South Africa", keywords: "location where based city map", href: links.maps },
+  { id: "notes", title: "Notes", subtitle: "Hey it’s Adriaan: about me", keywords: "about me bio adriaan intro story mission designer team deployyy hobbies mma hiking camping reading hire work together freelance retainer permanent position job", window: "notes", suggest: 2 },
+  { id: "theme", title: "Appearance", subtitle: "Switch between light and dark mode", keywords: "dark light mode theme night day", theme: true },
+];
+
+const projectText = (p: (typeof projects)[number]) =>
+  [
+    p.name,
+    p.role,
+    p.timeline,
+    p.website.label,
+    ...p.scope,
+    p.intro,
+    ...p.gallery.flatMap((row) => (row.layout === "text" ? [row.title, row.body ?? ""] : [])),
+  ].join(" ");
+
+const groups = ["Top Hit", "Suggestions", "Applications", "Client Projects", "Documents", "Music", "Photos", "Websites"];
+---
+
+<div class="spotlight" data-spotlight hidden>
+  <div class="spotlight__panel" role="dialog" aria-modal="true" aria-label="Spotlight Search">
+    <label class="spotlight__field">
+      <svg class="spotlight__glass" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="6.75" cy="6.75" r="4.75" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+        <path d="m10.3 10.3 3.7 3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+      </svg>
+      <input
+        class="spotlight__input"
+        type="text"
+        placeholder="Spotlight Search"
+        aria-label="Search the site"
+        autocomplete="off"
+        spellcheck="false"
+        data-spotlight-input
+      />
+    </label>
+
+    <div class="spotlight__results" data-spotlight-results>
+      {
+        groups.map((group) => (
+          <section class="spotlight__group" data-spotlight-group={group} hidden>
+            <h3 class="spotlight__heading">{group}</h3>
+            <ul class="spotlight__list" />
+          </section>
+        ))
+      }
+      <p class="spotlight__empty" data-spotlight-empty hidden>
+        No results for “<span data-spotlight-query></span>”
+      </p>
+    </div>
+    <p class="spotlight__status" aria-live="polite" data-spotlight-status></p>
+
+    <!-- Every searchable thing; the script moves the matches into the groups above -->
+    <ul class="spotlight__pool" data-spotlight-pool hidden>
+      {
+        apps.map((a) => {
+          const dock = app(a.id);
+          const icon = (
+            <span class="spotlight__icon spotlight__icon--app" aria-hidden="true">
+              <span class="spotlight__dock">
+                <DockIcon spec={dock.light} class="only-light" />
+                <DockIcon spec={dock.dark} class="only-dark" />
+              </span>
+            </span>
+          );
+          const text = (
+            <span class="spotlight__text">
+              <span class="spotlight__title">{a.title}</span>
+              <span class="spotlight__subtitle">{a.subtitle}</span>
+            </span>
+          );
+          return (
+            <li data-spotlight-item data-group="Applications" data-title={normalise(a.title)} data-search={normalise(`${a.title} ${a.subtitle} ${a.keywords}`)} data-suggest={a.suggest}>
+              {a.window ? (
+                <button class="spotlight__row" type="button" data-open-window={a.window}>{icon}{text}</button>
+              ) : a.theme ? (
+                <button class="spotlight__row" type="button" data-spotlight-theme>{icon}{text}</button>
+              ) : (
+                <a class="spotlight__row" href={a.href} {...(a.href!.startsWith("mailto:") ? {} : { target: "_blank", rel: "noopener" })}>
+                  {icon}
+                  {text}
+                </a>
+              )}
+            </li>
+          );
+        })
+      }
+      {
+        projects.map((p) => (
+          <li data-spotlight-item data-group="Client Projects" data-title={normalise(p.name)} data-search={normalise(`${projectText(p)} project case study client`)}>
+            <button class="spotlight__row" type="button" data-open-window={p.id}>
+              <Image class="spotlight__icon" src={p.icon} alt="" width={28} height={28} densities={[1, 2, 3]} loading="eager" />
+              <span class="spotlight__text">
+                <span class="spotlight__title">{p.name}</span>
+                <span class="spotlight__subtitle">{p.role} · {p.timeline}</span>
+              </span>
+            </button>
+          </li>
+        ))
+      }
+      <li data-spotlight-item data-group="Documents" data-title={normalise(cv.name)} data-search={normalise(`${cv.name} ${cv.title} cv resume curriculum vitae ${cv.summary}`)} data-suggest="4">
+        <button class="spotlight__row" type="button" data-open-window={cv.id}>
+          <Image class="spotlight__icon" src={cv.icon} alt="" width={28} height={28} densities={[1, 2, 3]} loading="eager" />
+          <span class="spotlight__text">
+            <span class="spotlight__title">{cv.name}</span>
+            <span class="spotlight__subtitle">{cv.title}</span>
+          </span>
+        </button>
+      </li>
+      {
+        (["light", "dark"] as const).map((theme) => (
+          <li class={`only-${theme}`} data-spotlight-item data-group="Documents" data-title={normalise("Download CV")} data-search={normalise(`download cv pdf resume curriculum vitae ${cv.filename}`)}>
+            <a class="spotlight__row" href={cv.pdf[theme]} download={cv.filename}>
+              <Image class="spotlight__icon" src={cv.icon} alt="" width={28} height={28} densities={[1, 2, 3]} loading="eager" />
+              <span class="spotlight__text">
+                <span class="spotlight__title">Download CV (PDF)</span>
+                <span class="spotlight__subtitle">{cv.filename}</span>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+      <li data-spotlight-item data-group="Music" data-title={normalise(nowPlaying.title)} data-search={normalise(`${nowPlaying.title} ${nowPlaying.artist} ${nowPlaying.playingFrom} song track music play`)}>
+        <button class="spotlight__row" type="button" data-open-window="music">
+          <Image class="spotlight__icon" src={queue[0].thumbnail} alt="" width={28} height={28} densities={[1, 2, 3]} loading="eager" />
+          <span class="spotlight__text">
+            <span class="spotlight__title">{nowPlaying.title}</span>
+            <span class="spotlight__subtitle">{nowPlaying.artist} · Song</span>
+          </span>
+        </button>
+      </li>
+      {
+        photos.map((photo, i) => (
+          <li data-spotlight-item data-group="Photos" data-title={normalise(photo.name)} data-search={normalise(`${photo.name} ${photo.alt} photo picture`)}>
+            <button class="spotlight__row" type="button" data-open-window="photos" data-photo-index={i}>
+              <Image class="spotlight__icon spotlight__icon--photo" src={photo.image} alt="" width={56} loading="lazy" />
+              <span class="spotlight__text">
+                <span class="spotlight__title">{photo.name}</span>
+                <span class="spotlight__subtitle">{photo.alt}</span>
+              </span>
+            </button>
+          </li>
+        ))
+      }
+      <li data-spotlight-item data-group="Websites" data-title="deployyy.co" data-search={normalise("deployyy.co deployyy agency studio website design development company")}>
+        <a class="spotlight__row" href="https://deployyy.co" target="_blank" rel="noopener">
+          <span class="spotlight__icon spotlight__icon--site" aria-hidden="true">
+            <svg width="22" height="10" viewBox="0 0 22 10" fill="currentColor">
+              <path d="M9.87461 0.258587V4.96917C9.87461 5.16197 9.69578 5.2952 9.55946 5.43153L5.18243 9.80856C5.01682 9.97417 4.75921 9.84536 4.75921 9.62455V5.24518C4.75921 5.17158 4.70401 5.11638 4.6304 5.11638H0.251034C0.0302258 5.11638 -0.0801785 4.84037 0.0670272 4.69316L4.64881 0.111381C4.72241 0.0377781 4.81441 0.000976562 4.90642 0.000976562H9.617C9.76421 0.000976562 9.87461 0.111381 9.87461 0.258587Z"></path>
+              <path d="M12.1074 9.62516V4.91458C12.1074 4.72178 12.2862 4.58854 12.4226 4.45222L16.7996 0.0751858C16.9652 -0.0904207 17.2228 0.0383843 17.2228 0.259193V4.65697C17.2228 4.73057 17.278 4.78577 17.3516 4.78577H21.7494C21.9702 4.78577 22.0806 5.06178 21.9334 5.20899L17.3516 9.79077C17.278 9.86437 17.186 9.90117 17.094 9.90117H12.7449C12.4797 9.90117 12.1074 9.89035 12.1074 9.62516Z"></path>
+            </svg>
+          </span>
+          <span class="spotlight__text">
+            <span class="spotlight__title">deployyy.co</span>
+            <span class="spotlight__subtitle">Adriaan’s design &amp; development agency</span>
+          </span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<style>
+  /* The page stays usable around it, as on macOS (no dimming); a click outside closes it */
+  .spotlight {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+
+  .spotlight[hidden] {
+    display: none;
+  }
+
+  .spotlight__panel {
+    position: absolute;
+    top: max(calc(var(--menubar-height) + 24px), 16vh);
+    left: 50%;
+    width: min(680px, calc(100vw - 24px));
+    translate: -50% 0;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--window-background) 90%, transparent);
+    backdrop-filter: blur(40px) saturate(1.8);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    border: 0.5px solid color-mix(in srgb, var(--label-primary) 14%, transparent);
+    box-shadow: var(--window-shadow);
+    color: var(--label-primary);
+    overflow: hidden;
+    animation: spotlight-in 160ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+
+  @keyframes spotlight-in {
+    from {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+
+  /* Search field: big, like Spotlight's */
+  .spotlight__field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 18px;
+  }
+
+  .spotlight__glass {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: color-mix(in srgb, var(--label-primary) 55%, transparent);
+  }
+
+  .spotlight__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--label-primary);
+    outline: none;
+  }
+
+  .spotlight__input::placeholder {
+    color: color-mix(in srgb, var(--label-primary) 40%, transparent);
+  }
+
+  /* Results */
+  .spotlight__results {
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-top: 0.5px solid color-mix(in srgb, var(--label-primary) 12%, transparent);
+    padding: 6px 8px 8px;
+  }
+
+  .spotlight__results:not(:has(.spotlight__group:not([hidden]), .spotlight__empty:not([hidden]))) {
+    display: none;
+  }
+
+  .spotlight__group[hidden],
+  .spotlight__empty[hidden],
+  .spotlight__pool[hidden] {
+    display: none;
+  }
+
+  .spotlight__heading {
+    margin: 8px 10px 4px;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-subheadline);
+    font-weight: var(--weight-emphasized);
+    color: color-mix(in srgb, var(--label-primary) 50%, transparent);
+  }
+
+  .spotlight__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .spotlight__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    color: inherit;
+    text-align: left;
+    text-decoration: none;
+  }
+
+  .spotlight__row.is-active {
+    background: var(--accent-indigo);
+    color: #ffffff;
+  }
+
+  .spotlight__row:focus-visible {
+    outline: none;
+  }
+
+  .spotlight__icon {
+    display: block;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  /* Dock icons are 36px; shown at 28px here */
+  .spotlight__icon--app {
+    position: relative;
+  }
+
+  .spotlight__dock {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    scale: calc(28 / 36);
+    transform-origin: 0 0;
+  }
+
+  .spotlight__icon--photo {
+    border-radius: 5px;
+    object-fit: cover;
+  }
+
+  .spotlight__icon--site {
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+    background: #111111;
+    color: #ffffff;
+  }
+
+  .spotlight__icon--site svg {
+    width: 17px;
+    height: auto;
+  }
+
+  .spotlight__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .spotlight__title,
+  .spotlight__subtitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .spotlight__title {
+    font-size: var(--text-body);
+    line-height: 17px;
+    font-weight: var(--weight-emphasized);
+  }
+
+  .spotlight__subtitle {
+    font-size: var(--text-subheadline);
+    line-height: 14px;
+    color: color-mix(in srgb, currentColor 60%, transparent);
+  }
+
+  .spotlight__empty {
+    margin: 0;
+    padding: 18px 10px;
+    text-align: center;
+    color: color-mix(in srgb, var(--label-primary) 55%, transparent);
+  }
+
+  .spotlight__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spotlight__panel {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { toggleTheme } from "../scripts/theme";
+
+  const root = document.querySelector<HTMLElement>("[data-spotlight]");
+
+  if (root) {
+    const panel = root.querySelector<HTMLElement>(".spotlight__panel")!;
+    const input = root.querySelector<HTMLInputElement>("[data-spotlight-input]")!;
+    const results = root.querySelector<HTMLElement>("[data-spotlight-results]")!;
+    const empty = root.querySelector<HTMLElement>("[data-spotlight-empty]")!;
+    const queryEcho = root.querySelector<HTMLElement>("[data-spotlight-query]")!;
+    const status = root.querySelector<HTMLElement>("[data-spotlight-status]")!;
+    const pool = root.querySelector<HTMLElement>("[data-spotlight-pool]")!;
+    const items = [...pool.querySelectorAll<HTMLElement>("[data-spotlight-item]")];
+    const groups = new Map(
+      [...root.querySelectorAll<HTMLElement>("[data-spotlight-group]")].map((g) => [g.dataset.spotlightGroup!, g]),
+    );
+    const listOf = (group: string) => groups.get(group)!.querySelector("ul")!;
+
+    /** Most results to show per group, so one group can't push the rest out of view */
+    const PER_GROUP = 5;
+
+    let active: HTMLElement | null = null;
+    let returnFocus: HTMLElement | null = null;
+
+    const normalise = (text: string) =>
+      text
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[’'`]/g, "")
+        .toLowerCase();
+
+    /** 0 = no match. Every word must appear; matches in the title rank higher */
+    const score = (item: HTMLElement, words: string[]) => {
+      const title = item.dataset.title!;
+      const haystack = item.dataset.search!;
+      if (!words.every((w) => haystack.includes(w))) return 0;
+      const query = words.join(" ");
+      if (title.startsWith(query)) return 4;
+      if (title.split(/\s+/).some((t) => t.startsWith(words[0]))) return 3;
+      if (words.every((w) => title.includes(w))) return 2;
+      return 1;
+    };
+
+    /** Rows that can be highlighted, in on-screen order */
+    const rows = () =>
+      [...results.querySelectorAll<HTMLElement>(".spotlight__row")].filter((row) => row.offsetParent !== null);
+
+    const setActive = (row: HTMLElement | null) => {
+      active?.classList.remove("is-active");
+      active = row;
+      active?.classList.add("is-active");
+      active?.scrollIntoView({ block: "nearest" });
+    };
+
+    const search = () => {
+      const text = input.value.trim();
+      const words = normalise(text).split(/\s+/).filter(Boolean);
+
+      // Put everything back in the pool, then deal the matches out to the groups
+      for (const item of items) pool.append(item);
+      for (const group of groups.values()) group.hidden = true;
+
+      if (!words.length) {
+        // Nothing typed yet: a few suggestions
+        const suggested = items.filter((i) => i.dataset.suggest).sort((a, b) => Number(a.dataset.suggest) - Number(b.dataset.suggest));
+        suggested.forEach((item) => listOf("Suggestions").append(item));
+        groups.get("Suggestions")!.hidden = false;
+        empty.hidden = true;
+        status.textContent = "";
+        setActive(rows()[0] ?? null);
+        return;
+      }
+
+      const matches = items
+        .map((item, order) => ({ item, order, score: score(item, words) }))
+        .filter((m) => m.score > 0 && getComputedStyle(m.item).display !== "none")
+        .sort((a, b) => b.score - a.score || a.order - b.order);
+
+      const shownPerGroup = new Map<string, number>();
+      matches.forEach((m, i) => {
+        const group = i === 0 ? "Top Hit" : m.item.dataset.group!;
+        const shown = shownPerGroup.get(group) ?? 0;
+        if (shown >= PER_GROUP) return;
+        shownPerGroup.set(group, shown + 1);
+        listOf(group).append(m.item);
+        groups.get(group)!.hidden = false;
+      });
+
+      empty.hidden = matches.length > 0;
+      queryEcho.textContent = text;
+      status.textContent = matches.length ? `${matches.length} ${matches.length === 1 ? "result" : "results"}` : "No results";
+      setActive(rows()[0] ?? null);
+    };
+
+    const open = () => {
+      if (!root.hidden) return;
+      returnFocus = document.activeElement as HTMLElement | null;
+      root.hidden = false;
+      input.select();
+      input.focus();
+      search();
+    };
+
+    const close = () => {
+      if (root.hidden) return;
+      root.hidden = true;
+      setActive(null);
+      returnFocus?.focus?.({ preventScroll: true });
+    };
+
+    /**
+     * Open the result: windows, links and photos go through their own handlers as the click carries
+     * on (scripts/windows.ts opens windows; Photos shows a [data-photo-index] photo)
+     */
+    const activate = (row: HTMLElement) => {
+      close();
+      if (row.hasAttribute("data-spotlight-theme")) toggleTheme();
+    };
+
+    input.addEventListener("input", search);
+
+    input.addEventListener("keydown", (event) => {
+      const list = rows();
+      const at = active ? list.indexOf(active) : -1;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (!list.length) return;
+        const next = event.key === "ArrowDown" ? Math.min(list.length - 1, at + 1) : Math.max(0, at - 1);
+        setActive(list[next]);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        active?.click();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        if (input.value) {
+          input.value = "";
+          search();
+        } else close();
+      }
+    });
+
+    results.addEventListener("pointermove", (event) => {
+      const row = (event.target as HTMLElement).closest<HTMLElement>(".spotlight__row");
+      if (row && row !== active) setActive(row);
+    });
+
+    // Clicking a result runs it (the click carries on to windows.ts / the link as normal)
+    results.addEventListener("click", (event) => {
+      const row = (event.target as HTMLElement).closest<HTMLElement>(".spotlight__row");
+      if (row) activate(row);
+    });
+
+    // Keep focus in the search field while the mouse is used on the results
+    results.addEventListener("mousedown", (event) => event.preventDefault());
+
+    // A click anywhere outside the panel closes it
+    root.addEventListener("pointerdown", (event) => {
+      if (!panel.contains(event.target as Node)) close();
+    });
+
+    // The menu bar's magnifying glass, and ⌘K / Ctrl+K anywhere
+    document.querySelector("[data-spotlight-open]")?.addEventListener("click", () => (root.hidden ? open() : close()));
+    document.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        root.hidden ? open() : close();
+      }
+    });
+  }
+</script>
