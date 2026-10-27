@@ -91,8 +91,9 @@ const linkAttrs = (item: DockApp) => {
     inset: 0;
     border-radius: var(--dock-radius);
     box-shadow: 0 0 8px 0 rgba(0, 0, 0, 0.06);
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    /* Background blur: 10px, so the wallpaper video behind the Dock is only slightly softened */
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
   }
 
   .dock__fill {
@@ -243,15 +244,23 @@ const linkAttrs = (item: DockApp) => {
   }
 
   /*
-   * Phones: an iPhone-sized Dock. YouTube Music, Maps, Photos and Notes live on the home screen
-   * instead (DesktopIcons.astro); Finder and the Trash (with its separator) have no place on a phone.
+   * Phones: an iPhone-style Dock of five apps, scaled up (from the bottom centre) to span the
+   * home-screen grid; the script sets --dock-scale. YouTube Music, Maps, Photos, Notes and
+   * Calendar live on the home screen instead (DesktopIcons.astro); Finder and the Trash (with its
+   * separator) have no place on a phone.
    */
   @media (max-width: 640px) {
+    .dock {
+      scale: var(--dock-scale, 1);
+      transform-origin: 50% 100%;
+    }
+
     .dock__item[data-app="finder"],
     .dock__item[data-app="music"],
     .dock__item[data-app="maps"],
     .dock__item[data-app="photos"],
     .dock__item[data-app="notes"],
+    .dock__item[data-app="calendar"],
     .dock__item[data-app="trash"],
     .dock__separator {
       display: none;
@@ -283,6 +292,26 @@ const linkAttrs = (item: DockApp) => {
   });
 
   const PLACE = "Cape%20Town%2C%20South%20Africa";
+  // Phones: scale the Dock to the width of the home-screen grid (its columns, without the side margins)
+  const phone = matchMedia("(max-width: 640px)");
+  const homeGrid = document.querySelector<HTMLElement>(".desktop-icons");
+
+  const fitDock = () => {
+    if (!dock) return;
+    if (!phone.matches || !homeGrid) {
+      dock.style.removeProperty("--dock-scale");
+      return;
+    }
+    const style = getComputedStyle(homeGrid);
+    const gridWidth = homeGrid.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    // offsetWidth ignores the scale, so this is the Dock's natural width
+    dock.style.setProperty("--dock-scale", String(gridWidth / dock.offsetWidth));
+  };
+
+  fitDock();
+  addEventListener("resize", fitDock);
+  phone.addEventListener("change", fitDock);
+
   // The Dock's Maps icon, and the phone home screen's (DesktopIcons.astro)
   for (const mapsLink of document.querySelectorAll<HTMLAnchorElement>('.dock__item[data-app="maps"] a, a[data-maps-link]')) {
     const ua = navigator.userAgent;

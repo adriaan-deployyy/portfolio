@@ -4,7 +4,7 @@
  * Laid out like macOS: a column down the right edge of the screen.
  * Hovering a folder pops up that project's showreel (Figma: Showreel Animation) beside it.
  * On phones the same icons line up in a 4 x 6 home-screen grid, joined by YouTube Music, Maps,
- * Photos and Notes (which leave the Dock there), and can't be dragged.
+ * Photos, Notes and Calendar (which leave the Dock there), and can't be dragged.
  */
 import { Image } from "astro:assets";
 import DockIcon from "./DockIcon.astro";
@@ -13,10 +13,17 @@ import { cv } from "../data/cv";
 import { dockApps } from "../data/dock";
 
 /** Dock apps that move to the home screen on phones (Dock.astro hides them there) */
-const HOME_APPS: Record<string, string> = { music: "YT Music", maps: "Maps", photos: "Photos", notes: "Notes" };
+const HOME_APPS: Record<string, string> = {
+  music: "YT Music",
+  maps: "Maps",
+  photos: "Photos",
+  notes: "Notes",
+  calendar: "Calendar",
+};
 const homeApps = dockApps
   .filter((app) => app.id in HOME_APPS)
-  .map((app) => ({ ...app, shortLabel: HOME_APPS[app.id] }));
+  // On the home screen, Calendar opens the booking page (in the Dock it only bounces)
+  .map((app) => ({ ...app, shortLabel: HOME_APPS[app.id], window: app.id === "calendar" ? "calendly" : app.window }));
 ---
 
 <ul class="desktop-icons" aria-label="Projects">
@@ -297,7 +304,7 @@ const homeApps = dockApps
     .desktop-icons {
       --home-icon: 60px;
       inset: 14px 0 auto;
-      height: calc(100% - 14px - 104px); /* clear of the Dock */
+      height: calc(100% - 14px - 112px); /* clear of the Dock */
       grid-auto-flow: row;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       grid-template-rows: repeat(6, minmax(0, 1fr));

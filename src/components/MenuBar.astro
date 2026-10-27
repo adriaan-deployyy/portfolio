@@ -66,6 +66,13 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
   <!-- Phones: an iPhone status bar instead (time on the left, Wi-Fi and battery on the right) -->
   <div class="statusbar">
     <time class="statusbar__time" data-phone-clock>9:41</time>
+    <button class="statusbar__search" type="button" aria-label="Search the site" aria-haspopup="dialog" data-spotlight-open>
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="6.75" cy="6.75" r="4.75" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="m10.3 10.3 3.7 3.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      <span>Search</span>
+    </button>
     <div class="statusbar__icons">
       <svg class="statusbar__wifi" width="17" height="12" viewBox="0 0 17 12" role="img" aria-label="Wi-Fi">
         <path d="M.72 3.72a11 11 0 0 1 15.56 0L14.3 5.7a8.2 8.2 0 0 0-11.6 0Z" />
@@ -190,7 +197,7 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
 
     .statusbar {
       display: grid;
-      grid-template-columns: 1fr 126px 1fr; /* 126px: room for the notch / Dynamic Island */
+      grid-template-columns: 1fr minmax(0, 168px) 1fr; /* time | search | Wi-Fi + battery */
       align-items: center;
       width: 100%;
       height: 100%;
@@ -204,6 +211,49 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
       font-weight: 600;
       letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;
+    }
+
+    /* A frosted search field in the middle (where the Dynamic Island sits); opens Spotlight */
+    .statusbar__search {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      font-size: 15px;
+      line-height: 20px;
+      font-weight: 500;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition:
+        background 160ms ease,
+        scale 160ms ease;
+    }
+
+    .statusbar__search span {
+      opacity: 0.85;
+    }
+
+    .statusbar__search svg {
+      flex-shrink: 0;
+      fill: none;
+      opacity: 0.85;
+    }
+
+    .statusbar__search:active {
+      background: rgba(255, 255, 255, 0.3);
+      scale: 0.97;
+    }
+
+    :global(:root[data-theme="dark"]) .statusbar__search {
+      background: rgba(255, 255, 255, 0.14);
     }
 
     .statusbar__icons {
