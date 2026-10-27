@@ -62,6 +62,23 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
       <span data-clock-time>9:41 AM</span>
     </time>
   </div>
+
+  <!-- Phones: an iPhone status bar instead (time on the left, Wi-Fi and battery on the right) -->
+  <div class="statusbar">
+    <time class="statusbar__time" data-phone-clock>9:41</time>
+    <div class="statusbar__icons">
+      <svg class="statusbar__wifi" width="17" height="12" viewBox="0 0 17 12" role="img" aria-label="Wi-Fi">
+        <path d="M.72 3.72a11 11 0 0 1 15.56 0L14.3 5.7a8.2 8.2 0 0 0-11.6 0Z" />
+        <path d="M3.41 6.41a7.2 7.2 0 0 1 10.18 0L11.75 8.25a4.6 4.6 0 0 0-6.5 0Z" />
+        <path d="M5.95 8.95a3.6 3.6 0 0 1 5.1 0L8.5 11.5Z" />
+      </svg>
+      <svg class="statusbar__battery" width="27" height="13" viewBox="0 0 27 13" role="img" aria-label="Battery" data-battery>
+        <rect class="statusbar__battery-case" x="0.5" y="0.5" width="23" height="12" rx="3.8" />
+        <path class="statusbar__battery-cap" d="M25 4.5v4a2.2 2.2 0 0 0 0-4Z" />
+        <rect class="statusbar__battery-level" x="2" y="2" width="20" height="9" rx="2.4" data-battery-level />
+      </svg>
+    </div>
+  </div>
 </header>
 
 <style>
@@ -151,6 +168,75 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
+
+  /*
+   * iPhone status bar: the time centred in the left "ear" beside the notch, Wi-Fi and battery
+   * in the right one. Battery shows the real level where the browser shares it (Chrome on
+   * Android), otherwise full; low is red and charging is green, as on iOS.
+   */
+  .statusbar {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .menubar {
+      padding: 0;
+    }
+
+    .menubar__leading,
+    .menubar__trailing {
+      display: none;
+    }
+
+    .statusbar {
+      display: grid;
+      grid-template-columns: 1fr 126px 1fr; /* 126px: room for the notch / Dynamic Island */
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding-top: 2px;
+    }
+
+    .statusbar__time {
+      justify-self: center;
+      font-size: 17px;
+      line-height: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .statusbar__icons {
+      grid-column: 3;
+      justify-self: center;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .statusbar svg {
+      display: block;
+      fill: currentColor;
+    }
+
+    .statusbar__battery-case {
+      fill: none;
+      stroke: currentColor;
+      stroke-opacity: 0.4;
+    }
+
+    .statusbar__battery-cap {
+      opacity: 0.45;
+    }
+
+    .statusbar__battery[data-state="low"] .statusbar__battery-level {
+      fill: #ff3b30;
+    }
+
+    .statusbar__battery[data-state="charging"] .statusbar__battery-level {
+      fill: #34c759;
+    }
+  }
 </style>
 
 <script>
@@ -168,8 +254,23 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
   const calendarWeekdays = document.querySelectorAll<HTMLElement>("[data-cal-weekday]");
   const calendarDates = document.querySelectorAll<HTMLElement>("[data-cal-date]");
 
+  // iPhone status bar: the visitor's own time format, without AM / PM (as iOS shows it)
+  const phoneClock = document.querySelector<HTMLTimeElement>("[data-phone-clock]");
+  const phoneFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+  const phoneTime = (date: Date) =>
+    phoneFormat
+      .formatToParts(date)
+      .filter((part) => part.type !== "dayPeriod")
+      .map((part) => part.value)
+      .join("")
+      .trim();
+
   const tick = () => {
     const now = new Date();
+    if (phoneClock) {
+      phoneClock.textContent = phoneTime(now);
+      phoneClock.setAttribute("datetime", now.toISOString());
+    }
     // "Wed, Apr 1" -> "Wed Apr 1", matching the macOS menu bar
     if (date) date.textContent = dateFormat.format(now).replace(",", "");
     if (time) time.textContent = timeFormat.format(now);
@@ -184,6 +285,33 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
     tick();
     setInterval(tick, 60_000);
   }, 60_000 - (Date.now() % 60_000));
+
+  /*
+   * Battery: the real level where the browser shares it (the Battery Status API, Chrome on
+   * Android); Safari and Firefox don't, so the icon stays full there.
+   */
+  type BatteryManager = EventTarget & { level: number; charging: boolean };
+  const battery = document.querySelector<SVGElement>("[data-battery]");
+  const batteryLevel = document.querySelector<SVGRectElement>("[data-battery-level]");
+  const getBattery = (navigator as Navigator & { getBattery?: () => Promise<BatteryManager> }).getBattery;
+
+  if (battery && batteryLevel && getBattery) {
+    const FULL_WIDTH = 20;
+    getBattery
+      .call(navigator)
+      .then((manager) => {
+        const show = () => {
+          const percent = Math.round(manager.level * 100);
+          batteryLevel.setAttribute("width", String(Math.max(1.5, FULL_WIDTH * manager.level)));
+          battery.dataset.state = manager.charging ? "charging" : percent <= 20 ? "low" : "";
+          battery.setAttribute("aria-label", `Battery ${percent}%${manager.charging ? ", charging" : ""}`);
+        };
+        show();
+        manager.addEventListener("levelchange", show);
+        manager.addEventListener("chargingchange", show);
+      })
+      .catch(() => {});
+  }
 
   // Control Center toggles light / dark
   document.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);

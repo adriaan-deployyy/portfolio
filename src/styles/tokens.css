@@ -67,6 +67,16 @@
   --tile-black-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%), #161616;
 }
 
+/*
+ * Phones (max-width: 640px, the breakpoint used across the components) get an iPhone home screen:
+ * a status bar in place of the menu bar and a 4 x 6 grid of icons in place of the loose desktop.
+ */
+@media (max-width: 640px) {
+  :root {
+    --menubar-height: 50px;
+  }
+}
+
 /* Windows has no SF Pro; use Switzer there instead of Segoe UI (set by the script in Base.astro) */
 :root[data-os="windows"] {
   --font-system: "Switzer", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -101,7 +111,7 @@
   --label-primary: rgba(255, 255, 255, 0.85);
   --scrollbar: rgba(255, 255, 255, 0.55);
   --dock-fill-luminosity: rgba(69, 69, 69, 0.5);
-  --dock-separator: #404040; /* Figma: Dock - Dark Mode → Separator */
+  --dock-separator: rgba(255, 255, 255, 0.12); /* Figma: Dock - Dark Mode → Separator */
 
   /* Window (Figma: Windows - Composed, Dark) */
   --window-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.8), 0 18px 54px 0 rgba(0, 0, 0, 0.57);

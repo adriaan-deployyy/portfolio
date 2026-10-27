@@ -3,10 +3,20 @@
  * Folder icons on the desktop (Figma: Macbook Folder Icon Designs, 70 x 70).
  * Laid out like macOS: a column down the right edge of the screen.
  * Hovering a folder pops up that project's showreel (Figma: Showreel Animation) beside it.
+ * On phones the same icons line up in a 4 x 6 home-screen grid, joined by YouTube Music, Maps,
+ * Photos and Notes (which leave the Dock there), and can't be dragged.
  */
 import { Image } from "astro:assets";
+import DockIcon from "./DockIcon.astro";
 import { projects } from "../data/projects";
 import { cv } from "../data/cv";
+import { dockApps } from "../data/dock";
+
+/** Dock apps that move to the home screen on phones (Dock.astro hides them there) */
+const HOME_APPS: Record<string, string> = { music: "YT Music", maps: "Maps", photos: "Photos", notes: "Notes" };
+const homeApps = dockApps
+  .filter((app) => app.id in HOME_APPS)
+  .map((app) => ({ ...app, shortLabel: HOME_APPS[app.id] }));
 ---
 
 <ul class="desktop-icons" aria-label="Projects">
@@ -40,6 +50,37 @@ import { cv } from "../data/cv";
       <span class="desktop-icon__label">{cv.name}</span>
     </button>
   </li>
+  {
+    /* Phones only: apps that sit on the home screen instead of the Dock */
+    homeApps.map((app, index) => (
+      <li class="desktop-icons__phone-only">
+        {(() => {
+          // Window apps open their window; Maps is a link (Dock.astro points it at the visitor's map app)
+          const Tag = app.window ? "button" : "a";
+          const attrs = app.window
+            ? { type: "button", "data-open-window": app.window, "aria-haspopup": "dialog", "aria-label": app.label }
+            : {
+                href: app.link,
+                target: "_blank",
+                rel: "noopener",
+                "data-maps-link": app.id === "maps" ? "" : undefined,
+                "aria-label": `${app.label} (opens in a new tab)`,
+              };
+          return (
+            <Tag class="desktop-icon desktop-icon--app" {...attrs} style={{ "--i": projects.length + 1 + index }}>
+              <span class="desktop-icon__app">
+                <DockIcon spec={app.light} class="only-light" />
+                <DockIcon spec={app.dark} class="only-dark" />
+              </span>
+              <span class="desktop-icon__label" aria-hidden="true">
+                {app.shortLabel}
+              </span>
+            </Tag>
+          );
+        })()}
+      </li>
+    ))
+  }
 </ul>
 
 <style>
@@ -242,6 +283,109 @@ import { cv } from "../data/cv";
       display: none;
     }
   }
+
+  .desktop-icons__phone-only {
+    display: none;
+  }
+
+  /*
+   * Phones: an iPhone home screen. Four columns by six rows between the status bar and the Dock,
+   * filled left to right from the top; empty slots stay free for more apps later. Icons are 60px
+   * like iOS, labels sit on one line, and a press dims and shrinks the icon instead of selecting it.
+   */
+  @media (max-width: 640px) {
+    .desktop-icons {
+      --home-icon: 60px;
+      inset: 14px 0 auto;
+      height: calc(100% - 14px - 104px); /* clear of the Dock */
+      grid-auto-flow: row;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: repeat(6, minmax(0, 1fr));
+      gap: 0 4px;
+      padding: 0 clamp(12px, 5vw, 28px);
+      direction: ltr;
+      justify-items: center;
+    }
+
+    .desktop-icons__phone-only {
+      display: block;
+    }
+
+    .desktop-icons > li {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .desktop-icon {
+      width: 100%;
+      max-width: 84px;
+      text-decoration: none;
+      gap: 5px;
+      padding: 0;
+      translate: none; /* desktop drag positions don't apply here */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .desktop-icon__img,
+    .desktop-icon__app {
+      width: var(--home-icon);
+      height: var(--home-icon);
+      transition:
+        scale 160ms ease,
+        filter 160ms ease;
+    }
+
+    .desktop-icon__img {
+      padding: 0;
+      border-radius: 0;
+    }
+
+    .desktop-icon:hover .desktop-icon__img,
+    .desktop-icon.is-selected .desktop-icon__img {
+      background: none;
+      box-shadow: none;
+    }
+
+    .desktop-icon:active .desktop-icon__img,
+    .desktop-icon:active .desktop-icon__app {
+      scale: 0.92;
+      filter: brightness(0.8);
+    }
+
+    .desktop-icon__label,
+    .desktop-icon.is-selected .desktop-icon__label {
+      width: 100%;
+      padding: 0 2px;
+      font-size: 11.5px;
+      line-height: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: none;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    }
+
+    .showreel {
+      display: none;
+    }
+  }
+
+  /* Dock icons are drawn at 36px; scale them up to the home-screen size, keeping their proportions */
+  .desktop-icon__app {
+    position: relative;
+    display: block;
+  }
+
+  .desktop-icon__app :global(.icon) {
+    width: 36px;
+    height: 36px;
+    scale: calc(60 / 36);
+    transform-origin: 0 0;
+  }
 </style>
 
 <script>
@@ -256,7 +400,10 @@ import { cv } from "../data/cv";
   type Offsets = Record<string, { x: number; y: number }>;
 
   const desktop = document.querySelector<HTMLElement>(".desktop");
-  const icons = [...document.querySelectorAll<HTMLElement>(".desktop-icon")];
+  // Home-screen apps only exist on phones, where nothing is dragged or scattered
+  const icons = [...document.querySelectorAll<HTMLElement>(".desktop-icon:not(.desktop-icon--app)")];
+  // Phones show the icons in a fixed home-screen grid (see the CSS)
+  const phone = matchMedia("(max-width: 640px)");
 
   const load = (): Offsets => {
     try {
@@ -348,7 +495,8 @@ import { cv } from "../data/cv";
 
   for (const icon of icons) {
     icon.addEventListener("pointerenter", (event) => {
-      if (event.pointerType !== "mouse" || !canHover.matches || icon.classList.contains("is-dragging")) return;
+      if (event.pointerType !== "mouse" || !canHover.matches || phone.matches || icon.classList.contains("is-dragging"))
+        return;
       hoverTimers.set(icon, window.setTimeout(() => showPreview(icon), HOVER_DELAY));
     });
     icon.addEventListener("pointerleave", () => hidePreview(icon));
@@ -358,6 +506,7 @@ import { cv } from "../data/cv";
 
   /** Re-clamp every moved folder, e.g. after the screen got smaller than when it was saved */
   const refitAll = () => {
+    if (phone.matches) return;
     for (const icon of icons) {
       const { x, y } = getOffset(icon);
       if (x || y) apply(icon, x, y);
@@ -411,22 +560,36 @@ import { cv } from "../data/cv";
   };
 
   const hasSavedLayout = icons.some((icon) => offsets[icon.dataset.openWindow!]);
+  let arranged = false;
 
-  if (hasSavedLayout) {
-    // Restore where the visitor left them last time
-    for (const icon of icons) {
-      const saved = offsets[icon.dataset.openWindow!];
-      if (saved) {
-        icon.style.setProperty("--x", `${saved.x}px`);
-        icon.style.setProperty("--y", `${saved.y}px`);
+  /** Lay out the desktop: the saved arrangement, or a fresh scatter. Desktop only. */
+  const arrange = () => {
+    arranged = true;
+    if (hasSavedLayout) {
+      // Restore where the visitor left them last time
+      for (const icon of icons) {
+        const saved = offsets[icon.dataset.openWindow!];
+        if (saved) {
+          icon.style.setProperty("--x", `${saved.x}px`);
+          icon.style.setProperty("--y", `${saved.y}px`);
+        }
       }
+      // Icons added since that layout was saved (e.g. the CV) get a free spot of their own
+      const unplaced = icons.filter((icon) => !offsets[icon.dataset.openWindow!]);
+      if (unplaced.length) scatter(unplaced);
+      refitAll();
+    } else {
+      scatter(icons);
     }
-    // Icons added since that layout was saved (e.g. the CV) get a free spot of their own
-    const unplaced = icons.filter((icon) => !offsets[icon.dataset.openWindow!]);
-    if (unplaced.length) scatter(unplaced);
-  } else {
-    scatter(icons);
-  }
+  };
+
+  if (!phone.matches) arrange();
+  // A phone-sized window that grows to desktop size gets its desktop layout then
+  phone.addEventListener("change", () => {
+    if (phone.matches) return;
+    if (arranged) refitAll();
+    else arrange();
+  });
 
   // Positions are set: reveal the folders (they pop in, staggered; see the CSS)
   document.querySelector(".desktop-icons")?.classList.add("is-ready");
@@ -435,7 +598,8 @@ import { cv } from "../data/cv";
     let dragged = false;
 
     icon.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
+      // On the phone home screen a press is just a tap
+      if (event.button !== 0 || phone.matches) return;
       const start = { x: event.clientX, y: event.clientY };
       const origin = getOffset(icon);
       dragged = false;
@@ -483,7 +647,6 @@ import { cv } from "../data/cv";
     );
   }
 
-  if (hasSavedLayout) refitAll();
   // Pull folders back on screen if the browser gets smaller
   addEventListener("resize", refitAll);
 </script>

@@ -2,8 +2,8 @@
 /*
  * Notification banners, from Figma: Designs → "Notifications" (light 6490:45667, dark 6490:45671).
  * Ten seconds after the page opens they slide in from the right, one at a time, newest on top,
- * like macOS, ending in the Figma order: LinkedIn, the meeting invite, then the Figma request with
- * a stacked card peeking beneath it. Each one goes away on its own after a while (not while the
+ * like macOS, ending in the Figma order: LinkedIn, the meeting invite, then the Figma request.
+ * Each one goes away on its own after a while (not while the
  * pointer is over them), with its close button, or when clicked, which also does what it says:
  *   - "Daniel just messaged you" opens LinkedIn
  *   - "Meeting with Client" opens Calendly to book a time
@@ -55,9 +55,7 @@ const gmail = app("gmail");
     </button>
   </div>
 
-  <div class="notif notif--stacked" data-notif="figma" hidden>
-    <!-- Figma "BG - Banner - Stack": another notification tucked underneath -->
-    <span class="notif__stack" aria-hidden="true"></span>
+  <div class="notif" data-notif="figma" hidden>
     <a class="notif__card" href={links.email}>
       <span class="notif__icon" aria-hidden="true">
         <DockIcon spec={gmail.light} class="only-light" />
@@ -154,19 +152,6 @@ const gmail = app("gmail");
   .notif__card:focus-visible {
     outline: 2px solid var(--accent-indigo);
     outline-offset: 2px;
-  }
-
-  .notif__stack {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: -8px;
-    height: 40px;
-    border-radius: 20px;
-    background: var(--notif-fill);
-    border: 0.5px solid var(--notif-edge);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
   }
 
   /* 32px app icon (the Dock's icons, scaled to fit), centred in a 4px-padded frame */

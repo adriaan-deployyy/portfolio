@@ -241,6 +241,22 @@ const linkAttrs = (item: DockApp) => {
       animation: none;
     }
   }
+
+  /*
+   * Phones: an iPhone-sized Dock. YouTube Music, Maps, Photos and Notes live on the home screen
+   * instead (DesktopIcons.astro); Finder and the Trash (with its separator) have no place on a phone.
+   */
+  @media (max-width: 640px) {
+    .dock__item[data-app="finder"],
+    .dock__item[data-app="music"],
+    .dock__item[data-app="maps"],
+    .dock__item[data-app="photos"],
+    .dock__item[data-app="notes"],
+    .dock__item[data-app="trash"],
+    .dock__separator {
+      display: none;
+    }
+  }
 </style>
 
 <script>
@@ -267,8 +283,8 @@ const linkAttrs = (item: DockApp) => {
   });
 
   const PLACE = "Cape%20Town%2C%20South%20Africa";
-  const mapsLink = document.querySelector<HTMLAnchorElement>('.dock__item[data-app="maps"] a');
-  if (mapsLink) {
+  // The Dock's Maps icon, and the phone home screen's (DesktopIcons.astro)
+  for (const mapsLink of document.querySelectorAll<HTMLAnchorElement>('.dock__item[data-app="maps"] a, a[data-maps-link]')) {
     const ua = navigator.userAgent;
     const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform ?? "";
     // iPads report "MacIntel" with touch, so both cases land on Apple Maps
