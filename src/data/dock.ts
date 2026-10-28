@@ -277,6 +277,7 @@ export const dockApps: DockApp[] = [
 export const trash: DockApp = {
   id: "trash",
   label: "Trash",
+  window: "trash",
   light: { kind: "image", src: `${L}/trash.png` },
   dark: { kind: "image", src: `${D}/trash.png` },
 };

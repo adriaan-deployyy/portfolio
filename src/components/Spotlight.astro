@@ -9,7 +9,7 @@
  */
 import { Image } from "astro:assets";
 import DockIcon from "./DockIcon.astro";
-import { dockApps, links, type DockApp } from "../data/dock";
+import { dockApps, links, trash, type DockApp } from "../data/dock";
 import { projects } from "../data/projects";
 import { cv } from "../data/cv";
 import { photos } from "../data/photos";
@@ -23,7 +23,7 @@ const normalise = (text: string) =>
     .replace(/[’'`]/g, "")
     .toLowerCase();
 
-const app = (id: string) => dockApps.find((a) => a.id === id) as DockApp;
+const app = (id: string) => [...dockApps, trash].find((a) => a.id === id) as DockApp;
 
 interface AppResult {
   id: string;
@@ -49,6 +49,7 @@ const apps: AppResult[] = [
   { id: "linkedin", title: "LinkedIn", subtitle: "Adriaan Myburgh on LinkedIn", keywords: "profile social connect work experience", href: links.linkedin },
   { id: "maps", title: "Maps", subtitle: "Cape Town, South Africa", keywords: "location where based city map", href: links.maps },
   { id: "notes", title: "Notes", subtitle: "Hey it’s Adriaan: about me", keywords: "about me bio adriaan intro story mission designer team deployyy hobbies mma hiking camping reading hire work together freelance retainer permanent position job", window: "notes", suggest: 2 },
+  { id: "trash", title: "Trash", subtitle: "PowerPoint and Adobe", keywords: "bin deleted rubbish recycle powerpoint adobe", window: "trash" },
   { id: "theme", title: "Appearance", subtitle: "Switch between light and dark mode", keywords: "dark light mode theme night day", theme: true },
 ];
 

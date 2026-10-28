@@ -14,6 +14,7 @@ import CvApp from "../components/CvApp.astro";
 import MusicApp from "../components/MusicApp.astro";
 import PhotosApp from "../components/PhotosApp.astro";
 import NotesApp from "../components/NotesApp.astro";
+import TrashApp from "../components/TrashApp.astro";
 import CvDownload from "../components/CvDownload.astro";
 import { projects } from "../data/projects";
 import { cv } from "../data/cv";
@@ -45,6 +46,9 @@ import { cv } from "../data/cv";
     </Window>
     <Window id="music" title="YouTube Music" width={1062} height={870}>
       <MusicApp />
+    </Window>
+    <Window id="trash" title="Trash" width={560} height={340}>
+      <TrashApp />
     </Window>
     <Window id={cv.id} title={cv.title} width={720} height={820}>
       <CvApp />

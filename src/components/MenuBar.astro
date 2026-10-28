@@ -1,10 +1,9 @@
 ---
-interface Props {
-  appName?: string;
-  menus?: string[];
-}
-
-const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "Help"] } = Astro.props;
+/*
+ * Menu bar. Desktop: the Deployyy mark on the left; search, Control Center (light / dark) and the
+ * clock on the right. The macOS app menus (Finder, File, Edit…) and Wi-Fi are left out, as they
+ * did nothing here. Phones get an iPhone status bar instead (see .statusbar).
+ */
 ---
 
 <header class="menubar">
@@ -26,21 +25,9 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
           fill="currentColor"></path>
       </svg>
     </a>
-    <!-- The app name opens that app's window (Finder) -->
-    <button class="menubar__item menubar__app" type="button" data-open-window="finder" aria-haspopup="dialog">{appName}</button>
-    {
-      menus.map((menu) => (
-        <button class="menubar__item" type="button">
-          {menu}
-        </button>
-      ))
-    }
   </div>
 
   <div class="menubar__trailing">
-    <span class="menubar__status menubar__wifi" aria-label="Wi-Fi" role="img">
-      <img src="/figma/light/wifi.svg" alt="" width="34.5" height="20" />
-    </span>
     <button
       class="menubar__item menubar__spotlight"
       type="button"
@@ -138,20 +125,9 @@ const { appName = "Finder", menus = ["File", "Edit", "View", "Item", "Window", "
     display: block;
   }
 
-  .menubar__app {
-    padding: 4px 9px 4px 11px;
-    font-weight: var(--weight-heavy);
-  }
-
   .menubar__status {
     display: flex;
     border-radius: 4px;
-  }
-
-  .menubar__wifi img {
-    display: block;
-    width: 34.5px;
-    height: 20px;
   }
 
   .menubar__spotlight {

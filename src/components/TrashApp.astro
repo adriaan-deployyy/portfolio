@@ -1,0 +1,203 @@
+---
+/*
+ * Trash, opened from the Dock: a Finder window in icon view, like the macOS Trash.
+ * Holds the two files from Figma's "Bin Icons" section (PowerPoint and Adobe).
+ * Click selects a file. "Empty" clears the Trash; it fills up again the next time the window opens.
+ */
+import { Image } from "astro:assets";
+import powerpoint from "../assets/trash/powerpoint.png";
+import adobe from "../assets/trash/adobe.svg";
+
+const files = [
+  { name: "PowerPoint", icon: powerpoint },
+  { name: "Adobe", icon: adobe },
+];
+---
+
+<div class="trash" data-trash>
+  <div class="trash__bar">
+    <span class="trash__title">Trash</span>
+    <button class="trash__empty" type="button" data-trash-empty>Empty</button>
+  </div>
+
+  <ul class="trash__items" aria-label="Items in the Trash">
+    {
+      files.map((file) => (
+        <li>
+          <button class="trash__item" type="button" data-trash-item>
+            <Image class="trash__icon" src={file.icon} alt="" width={64} height={64} densities={[1, 2, 3]} draggable="false" />
+            <span class="trash__name">{file.name}</span>
+          </button>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="trash__empty-state" data-trash-empty-state hidden>Trash is empty</p>
+</div>
+
+<style>
+  .trash {
+    --trash-hover: color-mix(in srgb, var(--label-primary) 7%, transparent);
+    --trash-rule: color-mix(in srgb, var(--label-primary) 10%, transparent);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    color: var(--label-primary);
+    user-select: none;
+  }
+
+  /* The strip macOS shows at the top of the Trash: name on the left, Empty on the right */
+  .trash__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px 8px 16px;
+    border-bottom: 1px solid var(--trash-rule);
+    background: color-mix(in srgb, var(--label-primary) 3%, transparent);
+  }
+
+  .trash__title {
+    font-weight: var(--weight-heavy);
+  }
+
+  .trash__empty {
+    padding: 2px 12px;
+    border-radius: 6px;
+    background: var(--window-background);
+    box-shadow:
+      0 0 0 0.5px color-mix(in srgb, var(--label-primary) 20%, transparent),
+      0 1px 1px rgba(0, 0, 0, 0.08);
+    font-weight: var(--weight-emphasized);
+  }
+
+  .trash__empty:hover:not(:disabled) {
+    background: var(--trash-hover);
+  }
+
+  .trash__empty:disabled {
+    opacity: 0.45;
+  }
+
+  .trash__items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    align-content: start;
+    gap: 6px 10px;
+    margin: 0;
+    padding: 16px;
+    list-style: none;
+  }
+
+  .trash__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 4px;
+    border-radius: 8px;
+    text-align: center;
+    transition:
+      opacity 220ms ease,
+      scale 220ms ease;
+  }
+
+  .trash__item:hover {
+    background: var(--trash-hover);
+  }
+
+  .trash__item.is-selected .trash__icon {
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--label-primary) 12%, transparent);
+  }
+
+  .trash__item.is-selected .trash__name {
+    border-radius: 4px;
+    background: var(--accent-indigo);
+    color: #fff;
+  }
+
+  /* Figma's icons aren't square (88 x 85, 89 x 79): fit them inside the 64px slot */
+  .trash__icon {
+    width: 64px;
+    height: 64px;
+    padding: 4px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  }
+
+  .trash__name {
+    padding: 0 5px;
+    font-weight: var(--weight-emphasized);
+  }
+
+  /* Emptying: the files shrink away */
+  .trash.is-emptying .trash__item {
+    opacity: 0;
+    scale: 0.6;
+  }
+
+  .trash__empty-state {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    font-size: 15px;
+    color: color-mix(in srgb, var(--label-primary) 45%, transparent);
+  }
+
+  .trash__empty-state[hidden] {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .trash__item {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-trash]");
+  const list = root?.querySelector<HTMLElement>(".trash__items");
+  const emptyButton = root?.querySelector<HTMLButtonElement>("[data-trash-empty]");
+  const emptyState = root?.querySelector<HTMLElement>("[data-trash-empty-state]");
+  const items = [...(root?.querySelectorAll<HTMLElement>("[data-trash-item]") ?? [])];
+
+  // Click selects a file, like Finder (clicking the background clears the selection)
+  root?.addEventListener("click", (event) => {
+    const item = (event.target as HTMLElement).closest<HTMLElement>("[data-trash-item]");
+    if ((event.target as HTMLElement).closest("[data-trash-empty]")) return;
+    for (const other of items) other.classList.toggle("is-selected", other === item);
+  });
+
+  const fill = () => {
+    root?.classList.remove("is-emptying");
+    if (list) list.hidden = false;
+    if (emptyState) emptyState.hidden = true;
+    if (emptyButton) emptyButton.disabled = false;
+    for (const item of items) item.classList.remove("is-selected");
+  };
+
+  emptyButton?.addEventListener("click", () => {
+    root?.classList.add("is-emptying");
+    emptyButton.disabled = true;
+    const delay = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240;
+    window.setTimeout(() => {
+      if (list) list.hidden = true;
+      if (emptyState) emptyState.hidden = false;
+    }, delay);
+  });
+
+  // The files are back each time the Trash is opened again
+  let wasOpen = false;
+  document.addEventListener("windows:change", (event) => {
+    const isOpen = ((event as CustomEvent).detail.open as string[]).includes("trash");
+    if (isOpen && !wasOpen) fill();
+    wasOpen = isOpen;
+  });
+</script>
